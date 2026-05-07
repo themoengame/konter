@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Profil Toko</title>
+</head>
+<body>
+    <div class="profil-container">
+        <div class="section-header">
+            <h3>🏪 Profil Toko</h3>
+            <button class="btn-primary" onclick="editProfil()">✏️ Edit Profil</button>
+        </div>
+        
+        <div class="profil-card">
+            <div class="profil-header" id="profilHeader">
+                <div class="profil-logo" id="profilLogo">
+                    <img id="logoPreview" src="" alt="Logo Toko" style="max-width: 100px; max-height: 100px;">
+                </div>
+                <div class="profil-info">
+                    <h2 id="namaToko">-</h2>
+                    <p id="alamatToko">-</p>
+                    <div class="contact-info">
+                        <span>📞 <span id="teleponToko">-</span></span>
+                        <span>💬 <span id="whatsappToko">-</span></span>
+                        <span>✉️ <span id="emailToko">-</span></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="info-grid">
+            <div class="info-card">
+                <h4>📊 Pengaturan Transaksi</h4>
+                <table class="info-table">
+                    <tr>
+                        <td>PPN</td>
+                        <td><strong id="ppnValue">-</strong>%</td>
+                    </tr>
+                    <tr>
+                        <td>Poin (%)</td>
+                        <td><strong id="poinValue">-</strong>%</td>
+                    </tr>
+                    <tr>
+                        <td>Footer Struk</td>
+                        <td><em id="footerText">-</em></td>
+                    </tr>
+                </table>
+            </div>
+            
+            <div class="info-card">
+                <h4>🖨️ Cetak</h4>
+                <table class="info-table">
+                    <tr>
+                        <td>Header Print</td>
+                        <td><strong id="printHeader">-</strong></td>
+                    </tr>
+                </table>
+                <div style="margin-top: 15px;">
+                    <button class="btn-secondary" onclick="testPrint()">🖨️ Test Print Struk</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="preview-card">
+            <h4>📄 Preview Struk</h4>
+            <div class="struk-preview" id="strukPreview">
+                <!-- Preview struk akan diisi JavaScript -->
+            </div>
+            <button class="btn-secondary" onclick="copyStrukPreview()">📋 Copy Struk</button>
+        </div>
+    </div>
+
+    <!-- Modal Edit Profil -->
+    <div id="editProfilModal" class="modal" style="display: none;">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3>Edit Profil Toko</h3>
+                <button class="modal-close" onclick="closeEditModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="editProfilForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Nama Toko</label>
+                            <input type="text" id="editNamaToko" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>Logo URL</label>
+                            <input type="text" id="editLogoUrl" class="form-control" placeholder="https://...">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Alamat</label>
+                        <textarea id="editAlamat" rows="2" class="form-control"></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Telepon</label>
+                            <input type="text" id="editTelepon" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>WhatsApp</label>
+                            <input type="text" id="editWhatsapp" class="form-control">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Email</label>
+                            <input type="email" id="editEmail" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>Footer Text</label>
+                            <input type="text" id="editFooterText" class="form-control">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Print Header</label>
+                            <input type="text" id="editPrintHeader" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>PPN (%)</label>
+                            <input type="number" id="editPpn" class="form-control" step="0.01">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Poin (%)</label>
+                        <input type="number" id="editPoinPersen" class="form-control" step="0.1">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeEditModal()">Batal</button>
+                <button class="btn-primary" onclick="saveProfil()">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .profil-container {
+            padding: 0;
+        }
+        .profil-card {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border-radius: var(--radius-lg);
+            padding: 30px;
+            margin-bottom: 30px;
+            color: white;
+        }
+        .profil-header {
+            display: flex;
+            gap: 25px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .profil-logo {
+            background: white;
+            border-radius: 50%;
+            width: 100px;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .profil-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .profil-info h2 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        .contact-info {
+            display: flex;
+            gap: 20px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .info-card {
+            background: var(--white);
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: var(--shadow);
+        }
+        .info-card h4 {
+            margin-bottom: 15px;
+            color: var(--primary);
+            border-bottom: 2px solid var(--light);
+            padding-bottom: 10px;
+        }
+        .info-table {
+            width: 100%;
+        }
+        .info-table td {
+            padding: 8px 0;
+        }
+        .info-table td:first-child {
+            width: 120px;
+            color: var(--gray);
+        }
+        .preview-card {
+            background: var(--white);
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: var(--shadow);
+        }
+        .preview-card h4 {
+            margin-bottom: 15px;
+            color: var(--primary);
+        }
+        .struk-preview {
+            background: #f9f9f9;
+            border: 1px dashed #ddd;
+            border-radius: var(--radius);
+            padding: 20px;
+            font-family: monospace;
+            font-size: 12px;
+            max-width: 300px;
+            margin: 0 auto;
+            white-space: pre-line;
+        }
+        @media (max-width: 768px) {
+            .profil-header {
+                flex-direction: column;
+                text-align: center;
+            }
+            .contact-info {
+                justify-content: center;
+            }
+        }
+    </style>
+
+    <script>
+        let konfigurasi = {};
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadKonfigurasi();
+        });
+        
+        async function loadKonfigurasi() {
+            try {
+                konfigurasi = await getKonfigurasi();
+                renderProfil();
+                renderStrukPreview();
+            } catch (error) {
+                console.error('Error loading konfigurasi:', error);
+                showToast('Gagal memuat profil toko', 'error');
+            }
+        }
+        
+        function renderProfil() {
+            document.getElementById('namaToko').textContent = konfigurasi.nama_toko || 'Counter HP';
+            document.getElementById('alamatToko').textContent = konfigurasi.alamat || '-';
+            document.getElementById('teleponToko').textContent = konfigurasi.telepon || '-';
+            document.getElementById('whatsappToko').textContent = konfigurasi.whatsapp || '-';
+            document.getElementById('emailToko').textContent = konfigurasi.email || '-';
+            document.getElementById('ppnValue').textContent = konfigurasi.ppn || '0';
+            document.getElementById('poinValue').textContent = konfigurasi.poin_persen || '1';
+            document.getElementById('footerText').textContent = konfigurasi.footer_text || '-';
+            document.getElementById('printHeader').textContent = konfigurasi.print_header || 'COUNTER HP';
+            
+            const logoImg = document.getElementById('logoPreview');
+            if (konfigurasi.logo_url && konfigurasi.logo_url !== '') {
+                logoImg.src = konfigurasi.logo_url;
+                logoImg.style.display = 'block';
+            } else {
+                logoImg.style.display = 'none';
+                logoImg.parentElement.innerHTML = '<div style="font-size: 48px;">🏪</div>';
+            }
+        }
+        
+        function renderStrukPreview() {
+            const now = new Date();
+            const tanggal = now.toLocaleDateString('id-ID');
+            const waktu = now.toLocaleTimeString('id-ID');
+            
+            const preview = `
+${'='.repeat(32)}
+${konfigurasi.print_header || 'COUNTER HP'}
+${'='.repeat(32)}
+${konfigurasi.alamat || ''}
+Telp: ${konfigurasi.telepon || ''}
+${'-'.repeat(32)}
+Tanggal : ${tanggal} ${waktu}
+No. TRX : TRX001
+${'-'.repeat(32)}
+Item               Qty    Harga
+${'-'.repeat(32)}
+Samsung S23         1   10,500,000
+Aksesoris Case      2      100,000
+${'-'.repeat(32)}
+Subtotal                   10,600,000
+Diskon                           0
+PPN ${konfigurasi.ppn || 0}%                     ${((10600000 * (konfigurasi.ppn || 0)) / 100).toLocaleString()}
+${'='.repeat(32)}
+TOTAL                     ${(10600000 + (10600000 * (konfigurasi.ppn || 0)) / 100).toLocaleString()}
+${'='.repeat(32)}
+${konfigurasi.footer_text || 'Terima kasih'}
+            `;
+            
+            document.getElementById('strukPreview').innerHTML = preview.replace(/\n/g, '<br>');
+        }
+        
+        function editProfil() {
+            document.getElementById('editNamaToko').value = konfigurasi.nama_toko || '';
+            document.getElementById('editLogoUrl').value = konfigurasi.logo_url || '';
+            document.getElementById('editAlamat').value = konfigurasi.alamat || '';
+            document.getElementById('editTelepon').value = konfigurasi.telepon || '';
+            document.getElementById('editWhatsapp').value = konfigurasi.whatsapp || '';
+            document.getElementById('editEmail').value = konfigurasi.email || '';
+            document.getElementById('editFooterText').value = konfigurasi.footer_text || '';
+            document.getElementById('editPrintHeader').value = konfigurasi.print_header || '';
+            document.getElementById('editPpn').value = konfigurasi.ppn || '0';
+            document.getElementById('editPoinPersen').value = konfigurasi.poin_persen || '1';
+            
+            document.getElementById('editProfilModal').style.display = 'flex';
+        }
+        
+        function closeEditModal() {
+            document.getElementById('editProfilModal').style.display = 'none';
+        }
+        
+        async function saveProfil() {
+            const updates = [
+                { key: 'nama_toko', value: document.getElementById('editNamaToko').value },
+                { key: 'logo_url', value: document.getElementById('editLogoUrl').value },
+                { key: 'alamat', value: document.getElementById('editAlamat').value },
+                { key: 'telepon', value: document.getElementById('editTelepon').value },
+                { key: 'whatsapp', value: document.getElementById('editWhatsapp').value },
+                { key: 'email', value: document.getElementById('editEmail').value },
+                { key: 'footer_text', value: document.getElementById('editFooterText').value },
+                { key: 'print_header', value: document.getElementById('editPrintHeader').value },
+                { key: 'ppn', value: document.getElementById('editPpn').value },
+                { key: 'poin_persen', value: document.getElementById('editPoinPersen').value }
+            ];
+            
+            showLoading(true);
+            
+            try {
+                for (const update of updates) {
+                    await updateKonfigurasi(update.key, update.value);
+                }
+                showToast('Profil toko berhasil diupdate', 'success');
+                closeEditModal();
+                await loadKonfigurasi();
+            } catch (error) {
+                showToast(error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        function testPrint() {
+            const printWindow = window.open('', '_blank');
+            const strukContent = document.getElementById('strukPreview').innerHTML.replace(/<br>/g, '\n');
+            
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>Test Print Struk</title>
+                    <style>
+                        body {
+                            font-family: monospace;
+                            font-size: 12px;
+                            padding: 20px;
+                            width: 300px;
+                            margin: 0 auto;
+                        }
+                        .struk {
+                            white-space: pre-line;
+                        }
+                        @media print {
+                            body {
+                                padding: 0;
+                                margin: 0;
+                            }
+                            button {
+                                display: none;
+                            }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="struk">${strukContent}</div>
+                    <button onclick="window.print()" style="margin-top: 20px; padding: 10px;">🖨️ Print</button>
+                    <script>
+                        setTimeout(() => {
+                            window.print();
+                        }, 500);
+                    <\/script>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+        }
+        
+        function copyStrukPreview() {
+            const strukText = document.getElementById('strukPreview').innerText;
+            navigator.clipboard.writeText(strukText);
+            showToast('Struk berhasil disalin ke clipboard', 'success');
+        }
+        
+        window.editProfil = editProfil;
+        window.closeEditModal = closeEditModal;
+        window.saveProfil = saveProfil;
+        window.testPrint = testPrint;
+        window.copyStrukPreview = copyStrukPreview;
+    </script>
+</body>
+</html>

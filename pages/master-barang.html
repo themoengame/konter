@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Master Barang</title>
+</head>
+<body>
+    <div class="master-container">
+        <div class="section-header">
+            <h3>📱 Master Barang (HP, Aksesoris, dll)</h3>
+            <button class="btn-primary" onclick="showAddBarangModal()">+ Tambah Barang</button>
+        </div>
+        
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Kode Barang</th>
+                        <th>Nama Barang</th>
+                        <th>Kategori</th>
+                        <th>Harga Beli</th>
+                        <th>Harga Jual</th>
+                        <th>Stok</th>
+                        <th>ID Supplier</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="barangTableBody">
+                    <tr><td colspan="9" style="text-align:center">Memuat data...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let barangData = [];
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadBarang();
+        });
+        
+        async function loadBarang() {
+            try {
+                barangData = await getAllMaster('barang');
+                renderBarangTable();
+            } catch (error) {
+                console.error('Error loading barang:', error);
+                document.getElementById('barangTableBody').innerHTML = '<tr><td colspan="9" style="text-align:center">Gagal memuat data</td></tr>';
+            }
+        }
+        
+        function renderBarangTable() {
+            const tbody = document.getElementById('barangTableBody');
+            if (barangData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center">Tidak ada data</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = barangData.map(item => `
+                <tr>
+                    <td>${item.id || '-'}</td>
+                    <td>${item.kode_barang || '-'}</td>
+                    <td>${escapeHtml(item.nama_barang) || '-'}</td>
+                    <td>${item.kategori || '-'}</td>
+                    <td>${formatRupiah(item.harga_beli)}</td>
+                    <td>${formatRupiah(item.harga_jual)}</td>
+                    <td>${item.stok || 0}</td>
+                    <td>${item.id_supplier || '-'}</td>
+                    <td class="actions">
+                        <button class="btn-edit" onclick="editBarang('${item.id}')">Edit</button>
+                        <button class="btn-delete" onclick="deleteBarang('${item.id}')">Hapus</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        function showAddBarangModal() {
+            const modal = document.getElementById('globalModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalBody = document.getElementById('modalBody');
+            
+            modalTitle.textContent = 'Tambah Barang';
+            modalBody.innerHTML = `
+                <form id="barangForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Kode Barang *</label>
+                            <input type="text" name="kode_barang" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Nama Barang *</label>
+                            <input type="text" name="nama_barang" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Kategori *</label>
+                            <select name="kategori" required>
+                                <option value="">Pilih</option>
+                                <option value="Handphone">Handphone</option>
+                                <option value="Aksesoris">Aksesoris</option>
+                                <option value="Lainnya">Lainnya</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>ID Supplier</label>
+                            <input type="text" name="id_supplier" placeholder="S001">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Harga Beli *</label>
+                            <input type="number" name="harga_beli" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Harga Jual *</label>
+                            <input type="number" name="harga_jual" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Stok Awal *</label>
+                        <input type="number" name="stok" value="0" required>
+                    </div>
+                </form>
+            `;
+            
+            const saveBtn = modal.querySelector('.modal-save');
+            saveBtn.onclick = async () => {
+                const form = document.getElementById('barangForm');
+                const formData = new FormData(form);
+                const data = {};
+                formData.forEach((value, key) => { data[key] = value; });
+                
+                try {
+                    showLoading(true);
+                    await createMaster('barang', data);
+                    showToast('Barang berhasil ditambahkan', 'success');
+                    closeModal();
+                    await loadBarang();
+                } catch (error) {
+                    showToast(error.message, 'error');
+                } finally {
+                    showLoading(false);
+                }
+            };
+            
+            modal.style.display = 'flex';
+        }
+        
+        async function editBarang(id) {
+            const item = barangData.find(b => b.id === id);
+            if (!item) return;
+            
+            const modal = document.getElementById('globalModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalBody = document.getElementById('modalBody');
+            
+            modalTitle.textContent = 'Edit Barang';
+            modalBody.innerHTML = `
+                <form id="barangForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Kode Barang</label>
+                            <input type="text" name="kode_barang" value="${item.kode_barang || ''}" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Nama Barang</label>
+                            <input type="text" name="nama_barang" value="${escapeHtml(item.nama_barang || '')}" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Kategori</label>
+                            <select name="kategori" required>
+                                <option value="">Pilih</option>
+                                <option value="Handphone" ${item.kategori === 'Handphone' ? 'selected' : ''}>Handphone</option>
+                                <option value="Aksesoris" ${item.kategori === 'Aksesoris' ? 'selected' : ''}>Aksesoris</option>
+                                <option value="Lainnya" ${item.kategori === 'Lainnya' ? 'selected' : ''}>Lainnya</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>ID Supplier</label>
+                            <input type="text" name="id_supplier" value="${item.id_supplier || ''}">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Harga Beli</label>
+                            <input type="number" name="harga_beli" value="${item.harga_beli}" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Harga Jual</label>
+                            <input type="number" name="harga_jual" value="${item.harga_jual}" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Stok</label>
+                        <input type="number" name="stok" value="${item.stok}" required>
+                    </div>
+                </form>
+            `;
+            
+            const saveBtn = modal.querySelector('.modal-save');
+            saveBtn.onclick = async () => {
+                const form = document.getElementById('barangForm');
+                const formData = new FormData(form);
+                const data = {};
+                formData.forEach((value, key) => { data[key] = value; });
+                
+                try {
+                    showLoading(true);
+                    await updateMaster('barang', id, data);
+                    showToast('Barang berhasil diupdate', 'success');
+                    closeModal();
+                    await loadBarang();
+                } catch (error) {
+                    showToast(error.message, 'error');
+                } finally {
+                    showLoading(false);
+                }
+            };
+            
+            modal.style.display = 'flex';
+        }
+        
+        async function deleteBarang(id) {
+            const confirmed = await confirmAction('Yakin hapus barang ini?');
+            if (!confirmed) return;
+            
+            try {
+                showLoading(true);
+                await deleteMaster('barang', id);
+                showToast('Barang berhasil dihapus', 'success');
+                await loadBarang();
+            } catch (error) {
+                showToast(error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        // Export global
+        window.showAddBarangModal = showAddBarangModal;
+        window.editBarang = editBarang;
+        window.deleteBarang = deleteBarang;
+    </script>
+</body>
+</html>

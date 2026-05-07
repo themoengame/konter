@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Transaksi Pembelian</title>
+</head>
+<body>
+    <div class="pembelian-container">
+        <div class="section-header">
+            <h3>Transaksi Pembelian (Restock Barang)</h3>
+        </div>
+        
+        <div class="transaction-container">
+            <!-- Panel Kiri: Pilih Barang -->
+            <div class="product-panel">
+                <div class="product-panel-header">
+                    <h3>Pilih Barang</h3>
+                    <input type="text" id="searchBarangPembelian" class="product-search" placeholder="Cari barang..." onkeyup="searchBarangPembelianGlobal(this.value)">
+                </div>
+                <div id="barangPembelianList" class="product-list">
+                    <div class="loading">Memuat barang...</div>
+                </div>
+            </div>
+            
+            <!-- Panel Kanan: Keranjang Pembelian -->
+            <div class="cart-panel">
+                <div class="cart-header">
+                    <h3>📦 Keranjang Pembelian</h3>
+                </div>
+                <div id="pembelianCartItems" class="cart-items">
+                    <div style="text-align:center; padding:20px; color:#999;">Keranjang kosong</div>
+                </div>
+                <div class="cart-summary">
+                    <div class="summary-row total">
+                        <span>Total Biaya</span>
+                        <span id="pembelianTotal">Rp 0</span>
+                    </div>
+                </div>
+                <div class="cart-actions">
+                    <button class="btn-secondary" onclick="clearPembelianCartGlobal()">Kosongkan</button>
+                    <button class="btn-primary" onclick="showPembelianModalGlobal()">Proses Pembelian</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Informasi Supplier -->
+        <div class="transaction-info">
+            <div class="info-row">
+                <div class="form-group" style="position: relative;">
+                    <label>Supplier</label>
+                    <input type="text" id="namaSupplier" placeholder="Cari supplier..." onkeyup="searchSupplierPembelianGlobal(this.value)">
+                    <div id="supplierSearchResult" class="search-result-dropdown" style="display:none;"></div>
+                    <input type="hidden" id="idSupplier">
+                </div>
+                <div class="form-group">
+                    <label>Catatan</label>
+                    <textarea id="catatanPembelian" rows="2" placeholder="Catatan pembelian..."></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .search-result-dropdown {
+            position: absolute;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: var(--radius);
+            max-height: 200px;
+            overflow-y: auto;
+            width: 100%;
+            z-index: 100;
+            box-shadow: var(--shadow);
+        }
+        .search-result-dropdown div {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+        .search-result-dropdown div:hover {
+            background: var(--light);
+        }
+    </style>
+
+    <script>
+        let pembelianCart = [];
+        let barangList = [];
+        let supplierList = [];
+        let searchBarangKeyword = '';
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadPembelianData();
+            renderBarangList();
+            updatePembelianCartDisplay();
+        });
+        
+        async function loadPembelianData() {
+            try {
+                [barangList, supplierList] = await Promise.all([
+                    getAllMaster('barang'),
+                    getAllMaster('supplier')
+                ]);
+                renderBarangList();
+            } catch (error) {
+                console.error('Error loading data:', error);
+                showToast('Gagal memuat data', 'error');
+            }
+        }
+        
+        function renderBarangList() {
+            let filtered = barangList;
+            if (searchBarangKeyword) {
+                filtered = barangList.filter(b => 
+                    b.nama_barang.toLowerCase().includes(searchBarangKeyword.toLowerCase()) ||
+                    (b.kode_barang && b.kode_barang.toLowerCase().includes(searchBarangKeyword.toLowerCase()))
+                );
+            }
+            
+            const container = document.getElementById('barangPembelianList');
+            if (filtered.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding:20px;">Tidak ada barang</div>';
+                return;
+            }
+            
+            container.innerHTML = filtered.map(barang => `
+                <div class="product-item">
+                    <div class="product-info">
+                        <div class="product-name">${escapeHtml(barang.nama_barang)}</div>
+                        <div class="product-price">Harga Beli: ${formatRupiah(barang.harga_beli)}</div>
+                        <div class="product-stock">Stok Saat Ini: ${barang.stok}</div>
+                    </div>
+                    <div class="product-actions">
+                        <input type="number" id="qty_pembelian_${barang.id}" min="1" value="1" style="width:60px;">
+                        <button class="btn-add" onclick="addToPembelianCart('${barang.id}', '${escapeHtml(barang.nama_barang).replace(/'/g, "\\'")}', ${barang.harga_beli})">Tambah</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function searchBarangPembelianGlobal(keyword) {
+            searchBarangKeyword = keyword;
+            renderBarangList();
+        }
+        
+        function addToPembelianCart(id, nama, hargaBeli) {
+            const qtyInput = document.getElementById(`qty_pembelian_${id}`);
+            let qty = 1;
+            if (qtyInput) qty = parseInt(qtyInput.value) || 1;
+            
+            const existing = pembelianCart.find(item => item.id === id);
+            if (existing) {
+                existing.qty += qty;
+            } else {
+                pembelianCart.push({ id, nama, harga_beli: hargaBeli, qty });
+            }
+            
+            updatePembelianCartDisplay();
+            showToast(`${nama} ditambahkan ke keranjang`, 'success');
+        }
+        
+        function updatePembelianCartDisplay() {
+            const container = document.getElementById('pembelianCartItems');
+            const totalSpan = document.getElementById('pembelianTotal');
+            
+            let total = 0;
+            
+            if (pembelianCart.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding:20px; color:#999;">Keranjang kosong</div>';
+                totalSpan.textContent = formatRupiah(0);
+                return;
+            }
+            
+            container.innerHTML = pembelianCart.map((item, index) => {
+                const subtotal = item.harga_beli * item.qty;
+                total += subtotal;
+                
+                return `
+                    <div class="cart-item">
+                        <div class="cart-item-info">
+                            <div class="cart-item-name">📦 ${escapeHtml(item.nama)}</div>
+                            <div class="cart-item-price">${formatRupiah(item.harga_beli)}</div>
+                            <div class="cart-item-qty">
+                                <button class="btn-qty-minus" onclick="updatePembelianCartQty(${index}, -1)">-</button>
+                                <span>${item.qty}</span>
+                                <button class="btn-qty-plus" onclick="updatePembelianCartQty(${index}, 1)">+</button>
+                            </div>
+                        </div>
+                        <div class="cart-item-subtotal">${formatRupiah(subtotal)}</div>
+                        <button class="cart-item-remove" onclick="removeFromPembelianCart(${index})">&times;</button>
+                    </div>
+                `;
+            }).join('');
+            
+            totalSpan.textContent = formatRupiah(total);
+        }
+        
+        function updatePembelianCartQty(index, delta) {
+            const item = pembelianCart[index];
+            if (!item) return;
+            
+            const newQty = item.qty + delta;
+            if (newQty < 1) {
+                removeFromPembelianCart(index);
+                return;
+            }
+            
+            item.qty = newQty;
+            updatePembelianCartDisplay();
+        }
+        
+        function removeFromPembelianCart(index) {
+            pembelianCart.splice(index, 1);
+            updatePembelianCartDisplay();
+        }
+        
+        function clearPembelianCartGlobal() {
+            if (pembelianCart.length > 0 && confirm('Kosongkan keranjang pembelian?')) {
+                pembelianCart = [];
+                updatePembelianCartDisplay();
+                showToast('Keranjang dikosongkan', 'info');
+            }
+        }
+        
+        async function searchSupplierPembelianGlobal(keyword) {
+            const resultDiv = document.getElementById('supplierSearchResult');
+            if (!keyword || keyword.length < 2) {
+                resultDiv.style.display = 'none';
+                return;
+            }
+            
+            const filtered = supplierList.filter(s => 
+                s.nama_supplier.toLowerCase().includes(keyword.toLowerCase()) ||
+                (s.kontak && s.kontak.includes(keyword))
+            );
+            
+            if (filtered.length > 0) {
+                resultDiv.innerHTML = filtered.map(s => `
+                    <div onclick="selectSupplierPembelianGlobal('${s.id}', '${escapeHtml(s.nama_supplier).replace(/'/g, "\\'")}')">
+                        <strong>${escapeHtml(s.nama_supplier)}</strong><br>
+                        <small>${s.kontak || ''}</small>
+                    </div>
+                `).join('');
+                resultDiv.style.display = 'block';
+            } else {
+                resultDiv.style.display = 'none';
+            }
+        }
+        
+        function selectSupplierPembelianGlobal(id, nama) {
+            document.getElementById('idSupplier').value = id;
+            document.getElementById('namaSupplier').value = nama;
+            document.getElementById('supplierSearchResult').style.display = 'none';
+        }
+        
+        function showPembelianModalGlobal() {
+            if (pembelianCart.length === 0) {
+                showToast('Keranjang masih kosong', 'warning');
+                return;
+            }
+            
+            const idSupplier = document.getElementById('idSupplier')?.value;
+            if (!idSupplier) {
+                showToast('Pilih supplier terlebih dahulu', 'warning');
+                return;
+            }
+            
+            const totalSpan = document.getElementById('pembelianTotal');
+            const total = parseRupiah(totalSpan.textContent);
+            
+            const modal = document.getElementById('globalModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalBody = document.getElementById('modalBody');
+            
+            modalTitle.textContent = 'Konfirmasi Pembelian';
+            
+            modalBody.innerHTML = `
+                <form id="pembelianForm">
+                    <div class="form-group">
+                        <label>Supplier</label>
+                        <input type="text" value="${escapeHtml(document.getElementById('namaSupplier').value)}" readonly style="background:#f5f5f5;">
+                    </div>
+                    <div class="form-group">
+                        <label>Total Biaya</label>
+                        <input type="text" value="${formatRupiah(total)}" readonly style="background:#f5f5f5;">
+                    </div>
+                    <div class="form-group">
+                        <label>Status Pembayaran</label>
+                        <select id="statusPembayaran">
+                            <option value="Lunas">Lunas</option>
+                            <option value="Hutang">Hutang</option>
+                            <option value="DP">DP</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Catatan</label>
+                        <textarea id="modalCatatan" rows="2">${escapeHtml(document.getElementById('catatanPembelian')?.value || '')}</textarea>
+                    </div>
+                </form>
+            `;
+            
+            const saveBtn = modal.querySelector('.modal-save');
+            saveBtn.textContent = 'Proses Pembelian';
+            saveBtn.onclick = async () => {
+                await prosesPembelianGlobal();
+            };
+            
+            modal.style.display = 'flex';
+        }
+        
+        async function prosesPembelianGlobal() {
+            const idSupplier = document.getElementById('idSupplier').value;
+            const statusPembayaran = document.getElementById('statusPembayaran')?.value;
+            const catatan = document.getElementById('modalCatatan')?.value || document.getElementById('catatanPembelian')?.value || '';
+            const totalSpan = document.getElementById('pembelianTotal');
+            const total = parseRupiah(totalSpan.textContent);
+            
+            const items = pembelianCart.map(item => ({
+                id_barang: item.id,
+                qty: item.qty,
+                harga_beli: item.harga_beli
+            }));
+            
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            
+            const data = {
+                id_supplier: idSupplier,
+                total_biaya: total,
+                status_pembayaran: statusPembayaran,
+                catatan: catatan,
+                dibuat_oleh: user.nama || user.email,
+                items: JSON.stringify(items)
+            };
+            
+            showLoading(true);
+            
+            try {
+                const result = await savePembelian(data);
+                if (result.success) {
+                    showToast(`Pembelian berhasil! ID: ${result.id_pembelian}`, 'success');
+                    closeModal();
+                    pembelianCart = [];
+                    updatePembelianCartDisplay();
+                    document.getElementById('idSupplier').value = '';
+                    document.getElementById('namaSupplier').value = '';
+                    document.getElementById('catatanPembelian').value = '';
+                    await loadPembelianData();
+                }
+            } catch (error) {
+                showToast(error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        // Export global
+        window.searchBarangPembelianGlobal = searchBarangPembelianGlobal;
+        window.addToPembelianCart = addToPembelianCart;
+        window.updatePembelianCartQty = updatePembelianCartQty;
+        window.removeFromPembelianCart = removeFromPembelianCart;
+        window.clearPembelianCartGlobal = clearPembelianCartGlobal;
+        window.searchSupplierPembelianGlobal = searchSupplierPembelianGlobal;
+        window.selectSupplierPembelianGlobal = selectSupplierPembelianGlobal;
+        window.showPembelianModalGlobal = showPembelianModalGlobal;
+    </script>
+</body>
+</html>

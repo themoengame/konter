@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Master Pulsa</title>
+</head>
+<body>
+    <div class="master-container">
+        <div class="section-header">
+            <h3>📡 Master Pulsa & Token</h3>
+            <button class="btn-primary" onclick="showAddPulsaModal()">+ Tambah Pulsa</button>
+        </div>
+        
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>ID Barang</th>
+                        <th>Operator</th>
+                        <th>Nominal</th>
+                        <th>Harga Beli</th>
+                        <th>Harga Jual</th>
+                        <th>Stok Deposit</th>
+                        <th>Status</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="pulsaTableBody">
+                    <tr><td colspan="9" style="text-align:center">Memuat data...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let pulsaData = [];
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadPulsa();
+        });
+        
+        async function loadPulsa() {
+            try {
+                pulsaData = await getAllMaster('pulsa');
+                renderPulsaTable();
+            } catch (error) {
+                console.error('Error loading pulsa:', error);
+                document.getElementById('pulsaTableBody').innerHTML = '<tr><td colspan="9" style="text-align:center">Gagal memuat data</td></tr>';
+            }
+        }
+        
+        function renderPulsaTable() {
+            const tbody = document.getElementById('pulsaTableBody');
+            if (pulsaData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center">Tidak ada data</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = pulsaData.map(item => `
+                <tr>
+                    <td>${item.id || '-'}</td>
+                    <td>${item.id_barang || '-'}</td>
+                    <td>${item.operator || '-'}</td>
+                    <td>${formatRupiah(item.nominal)}</td>
+                    <td>${formatRupiah(item.harga_beli)}</td>
+                    <td>${formatRupiah(item.harga_jual)}</td>
+                    <td>${item.stok_deposit || 0}</td>
+                    <td><span class="status-badge ${item.status === 'aktif' ? 'status-active' : 'status-inactive'}">${item.status || 'aktif'}</span></td>
+                    <td class="actions">
+                        <button class="btn-edit" onclick="editPulsa('${item.id}')">Edit</button>
+                        <button class="btn-delete" onclick="deletePulsa('${item.id}')">Hapus</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        function showAddPulsaModal() {
+            const modal = document.getElementById('globalModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalBody = document.getElementById('modalBody');
+            
+            modalTitle.textContent = 'Tambah Pulsa';
+            modalBody.innerHTML = `
+                <form id="pulsaForm">
+                    <div class="form-group">
+                        <label>ID Barang (Relasi ke master barang) *</label>
+                        <input type="text" name="id_barang" required placeholder="B001">
+                    </div>
+                    <div class="form-group">
+                        <label>Operator *</label>
+                        <input type="text" name="operator" required placeholder="Telkomsel, Indosat, XL, PLN">
+                    </div>
+                    <div class="form-group">
+                        <label>Nominal *</label>
+                        <input type="number" name="nominal" required placeholder="5000, 10000, 20000">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Harga Beli *</label>
+                            <input type="number" name="harga_beli" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Harga Jual *</label>
+                            <input type="number" name="harga_jual" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Stok Deposit</label>
+                            <input type="number" name="stok_deposit" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Status</label>
+                            <select name="status">
+                                <option value="aktif">Aktif</option>
+                                <option value="nonaktif">Nonaktif</option>
+                            </select>
+                        </div>
+                    </div>
+                </form>
+            `;
+            
+            const saveBtn = modal.querySelector('.modal-save');
+            saveBtn.onclick = async () => {
+                const form = document.getElementById('pulsaForm');
+                const formData = new FormData(form);
+                const data = {};
+                formData.forEach((value, key) => { data[key] = value; });
+                
+                try {
+                    showLoading(true);
+                    await createMaster('pulsa', data);
+                    showToast('Pulsa berhasil ditambahkan', 'success');
+                    closeModal();
+                    await loadPulsa();
+                } catch (error) {
+                    showToast(error.message, 'error');
+                } finally {
+                    showLoading(false);
+                }
+            };
+            
+            modal.style.display = 'flex';
+        }
+        
+        async function editPulsa(id) {
+            const item = pulsaData.find(p => p.id === id);
+            if (!item) return;
+            
+            const modal = document.getElementById('globalModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalBody = document.getElementById('modalBody');
+            
+            modalTitle.textContent = 'Edit Pulsa';
+            modalBody.innerHTML = `
+                <form id="pulsaForm">
+                    <div class="form-group">
+                        <label>ID Barang</label>
+                        <input type="text" name="id_barang" value="${item.id_barang || ''}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Operator</label>
+                        <input type="text" name="operator" value="${item.operator || ''}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Nominal</label>
+                        <input type="number" name="nominal" value="${item.nominal || 0}" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Harga Beli</label>
+                            <input type="number" name="harga_beli" value="${item.harga_beli || 0}" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Harga Jual</label>
+                            <input type="number" name="harga_jual" value="${item.harga_jual || 0}" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Stok Deposit</label>
+                            <input type="number" name="stok_deposit" value="${item.stok_deposit || 0}">
+                        </div>
+                        <div class="form-group">
+                            <label>Status</label>
+                            <select name="status">
+                                <option value="aktif" ${item.status === 'aktif' ? 'selected' : ''}>Aktif</option>
+                                <option value="nonaktif" ${item.status === 'nonaktif' ? 'selected' : ''}>Nonaktif</option>
+                            </select>
+                        </div>
+                    </div>
+                </form>
+            `;
+            
+            const saveBtn = modal.querySelector('.modal-save');
+            saveBtn.onclick = async () => {
+                const form = document.getElementById('pulsaForm');
+                const formData = new FormData(form);
+                const data = {};
+                formData.forEach((value, key) => { data[key] = value; });
+                
+                try {
+                    showLoading(true);
+                    await updateMaster('pulsa', id, data);
+                    showToast('Pulsa berhasil diupdate', 'success');
+                    closeModal();
+                    await loadPulsa();
+                } catch (error) {
+                    showToast(error.message, 'error');
+                } finally {
+                    showLoading(false);
+                }
+            };
+            
+            modal.style.display = 'flex';
+        }
+        
+        async function deletePulsa(id) {
+            const confirmed = await confirmAction('Yakin hapus pulsa ini?');
+            if (!confirmed) return;
+            
+            try {
+                showLoading(true);
+                await deleteMaster('pulsa', id);
+                showToast('Pulsa berhasil dihapus', 'success');
+                await loadPulsa();
+            } catch (error) {
+                showToast(error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        window.showAddPulsaModal = showAddPulsaModal;
+        window.editPulsa = editPulsa;
+        window.deletePulsa = deletePulsa;
+    </script>
+    
+    <style>
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status-inactive {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</body>
+</html>

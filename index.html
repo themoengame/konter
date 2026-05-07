@@ -148,6 +148,7 @@
             height: 100vh;
             overflow-y: auto;
             transition: all 0.3s;
+            z-index: 100;
         }
 
         .sidebar-header {
@@ -256,13 +257,14 @@
             width: 100%;
             background: var(--white);
             border-radius: 12px;
-            overflow: hidden;
+            overflow-x: auto;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
         .data-table table {
             width: 100%;
             border-collapse: collapse;
+            min-width: 600px;
         }
 
         .data-table th, .data-table td {
@@ -358,6 +360,8 @@
             align-items: center;
             padding: 10px;
             border-bottom: 1px solid var(--light);
+            flex-wrap: wrap;
+            gap: 10px;
         }
 
         .cart-item-qty {
@@ -376,13 +380,17 @@
         /* Product search */
         .product-search {
             margin-bottom: 20px;
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--gray);
+            border-radius: 8px;
         }
 
         .product-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
             gap: 15px;
-            max-height: 400px;
+            max-height: 500px;
             overflow-y: auto;
         }
 
@@ -429,6 +437,13 @@
             color: white;
         }
 
+        /* Layout */
+        .two-columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .sidebar {
@@ -446,10 +461,32 @@
             .sidebar-menu li span:first-child {
                 font-size: 24px;
             }
+            .two-columns {
+                grid-template-columns: 1fr;
+            }
         }
 
         .hidden {
             display: none;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid var(--light);
+            border-top: 3px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        button:disabled .loading-spinner {
+            display: inline-block;
         }
     </style>
 </head>
@@ -509,18 +546,6 @@
                     <span>👥</span>
                     <span>Konsumen</span>
                 </li>
-                <li data-page="pulsa">
-                    <span>📞</span>
-                    <span>Pulsa</span>
-                </li>
-                <li data-page="pembayaran">
-                    <span>💳</span>
-                    <span>Pembayaran Online</span>
-                </li>
-                <li data-page="servis">
-                    <span>🔧</span>
-                    <span>Servis</span>
-                </li>
                 <li data-page="laporan">
                     <span>📄</span>
                     <span>Laporan</span>
@@ -549,14 +574,21 @@
     </div>
 
     <script>
+        // ==================== KONFIGURASI ====================
+        const BASE_URL = 'https://script.google.com/macros/s/AKfycbwYd-keZ4UidqbCUaDU5NGfMg3UgjJ0AZRoj4Ps0_P3qlhc2qHF_lk3jBm_jIRx9-nm/exec';
+        
         // ==================== GLOBAL VARIABLES ====================
         let currentUser = null;
         let currentPage = 'dashboard';
-        let cart = [];
         
-        // Base URL - Update this with your Apps Script URL
-        const BASE_URL = 'https://script.google.com/macros/s/AKfycbwJNO7SRTNtoLvyJcTJg0OXHKNayksFyMVvs2_2oblk0OZgd9I3hoVS31msN9vYFV4nXA/exec';
-
+        // Cart for transaction
+        let cart = [];
+        let purchaseCart = [];
+        let products = [];
+        let konsumenList = [];
+        let suppliersList = [];
+        let currentFilter = 'all';
+        
         // ==================== HELPER FUNCTIONS ====================
         function showToast(message, type = 'success') {
             const toast = document.createElement('div');
@@ -566,53 +598,35 @@
             setTimeout(() => toast.remove(), 3000);
         }
 
-        async function apiCall(action, params = {}, method = 'GET') {
-    const url = new URL(BASE_URL);
-    url.searchParams.append('action', action);
-    
-    // Untuk GET request, tambahkan params ke URL
-    if (method === 'GET') {
-        for (const [key, value] of Object.entries(params)) {
-            if (value !== undefined && value !== null && value !== '') {
-                url.searchParams.append(key, value);
+        function formatNumber(num) {
+            if (num === undefined || num === null) return '0';
+            return Number(num).toLocaleString('id-ID');
+        }
+
+        async function callApi(action, params = {}) {
+            const url = new URL(BASE_URL);
+            url.searchParams.append('action', action);
+            
+            for (const [key, value] of Object.entries(params)) {
+                if (value !== undefined && value !== null && value !== '') {
+                    url.searchParams.append(key, value);
+                }
+            }
+            
+            try {
+                const response = await fetch(url.toString());
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('API Error:', error);
+                showToast('Koneksi error: ' + error.message, 'error');
+                return { success: false, message: error.message };
             }
         }
-    }
-    
-    const fetchOptions = {
-        method: method,
-        mode: 'cors',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        }
-    };
-    
-    // Untuk POST request, kirim params sebagai body
-    if (method === 'POST') {
-        const formBody = new URLSearchParams();
-        formBody.append('action', action);
-        for (const [key, value] of Object.entries(params)) {
-            if (value !== undefined && value !== null && value !== '') {
-                formBody.append(key, value);
-            }
-        }
-        fetchOptions.body = formBody;
-    }
-    
-    try {
-        const response = await fetch(url.toString(), fetchOptions);
-        const data = await response.json();
-        return data;
-    } catch (error) {
-        console.error('API Error:', error);
-        showToast('Koneksi error: ' + error.message, 'error');
-        return { success: false, message: error.message };
-    }
-}
 
         async function loadConfig() {
-            const result = await apiCall('konfigurasi', { operation: 'read' });
-            if (result.success) {
+            const result = await callApi('konfigurasi', { operation: 'read' });
+            if (result.success && result.data) {
                 return result.data;
             }
             return {};
@@ -635,7 +649,7 @@
                 return;
             }
             
-            const result = await apiCall('login', { email, password });
+            const result = await callApi('login', { email, password });
             
             if (result.success) {
                 currentUser = {
@@ -672,6 +686,8 @@
         function logout() {
             localStorage.removeItem('currentUser');
             currentUser = null;
+            cart = [];
+            purchaseCart = [];
             document.getElementById('loginPage').style.display = 'flex';
             document.getElementById('appContainer').classList.remove('active');
             updateLoginDisplay();
@@ -681,7 +697,17 @@
         // ==================== PAGE LOADER ====================
         function loadPage(page) {
             currentPage = page;
-            document.getElementById('pageTitle').textContent = getPageTitle(page);
+            const titles = {
+                dashboard: '📊 Dashboard',
+                penjualan: '💰 Transaksi Penjualan',
+                pembelian: '📦 Transaksi Pembelian',
+                barang: '📱 Master Barang',
+                supplier: '🏭 Master Supplier',
+                konsumen: '👥 Master Konsumen',
+                laporan: '📄 Laporan',
+                profil: '🏪 Profil Toko'
+            };
+            document.getElementById('pageTitle').textContent = titles[page] || 'Dashboard';
             
             // Update active menu
             document.querySelectorAll('.sidebar-menu li').forEach(li => {
@@ -711,15 +737,6 @@
                 case 'konsumen':
                     loadKonsumen();
                     break;
-                case 'pulsa':
-                    loadPulsa();
-                    break;
-                case 'pembayaran':
-                    loadPembayaran();
-                    break;
-                case 'servis':
-                    loadServis();
-                    break;
                 case 'laporan':
                     loadLaporan();
                     break;
@@ -731,27 +748,10 @@
             }
         }
 
-        function getPageTitle(page) {
-            const titles = {
-                dashboard: '📊 Dashboard',
-                penjualan: '💰 Transaksi Penjualan',
-                pembelian: '📦 Transaksi Pembelian',
-                barang: '📱 Master Barang',
-                supplier: '🏭 Master Supplier',
-                konsumen: '👥 Master Konsumen',
-                pulsa: '📞 Master Pulsa',
-                pembayaran: '💳 Master Pembayaran Online',
-                servis: '🔧 Master Servis',
-                laporan: '📄 Laporan',
-                profil: '🏪 Profil Toko'
-            };
-            return titles[page] || 'Dashboard';
-        }
-
         // ==================== DASHBOARD ====================
         async function loadDashboard() {
-            const result = await apiCall('dashboard-stats');
-            if (result.success) {
+            const result = await callApi('dashboard-stats');
+            if (result.success && result.data) {
                 const data = result.data;
                 const html = `
                     <div class="stats-grid">
@@ -782,10 +782,19 @@
                     </div>
                     <div class="stat-card">
                         <h3>🏆 Top 5 Konsumen (Poin Tertinggi)</h3>
-                        <table style="width:100%; margin-top:10px;">
-                            <tr><th>Nama</th><th>Poin</th></tr>
-                            ${data.top_konsumen.map(k => `<tr><td>${k.nama}</td><td>${formatNumber(k.poin)}</td></tr>`).join('')}
-                        </table>
+                        <div class="data-table">
+                            <table>
+                                <thead>
+                                    <tr><th>Nama</th><th>Poin</th></tr>
+                                </thead>
+                                <tbody>
+                                    ${data.top_konsumen && data.top_konsumen.length > 0 ? 
+                                        data.top_konsumen.map(k => `<tr><td>${k.nama}</td><td>${formatNumber(k.poin)}</td></tr>`).join('') : 
+                                        '<tr><td colspan="2">Belum ada data</td></tr>'
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 `;
                 document.getElementById('pageContent').innerHTML = html;
@@ -795,42 +804,19 @@
         }
 
         // ==================== PENJUALAN ====================
-        let currentFilter = 'all';
-        let products = [];
-        let konsumenList = [];
-
         async function loadPenjualan() {
             // Load products and customers
-            const barangResult = await apiCall('barang', { operation: 'read' });
-            const pulsaResult = await apiCall('pulsa', { operation: 'read' });
-            const pembayaranResult = await apiCall('pembayaran', { operation: 'read' });
-            const servisResult = await apiCall('servis', { operation: 'read' });
-            const konsumenResult = await apiCall('konsumen', { operation: 'read' });
+            const barangResult = await callApi('barang', { operation: 'read' });
+            const konsumenResult = await callApi('konsumen', { operation: 'read' });
             
             products = [];
-            
-            if (barangResult.success) {
+            if (barangResult.success && barangResult.data) {
                 barangResult.data.forEach(b => {
                     products.push({ ...b, tipe: 'barang' });
                 });
             }
-            if (pulsaResult.success) {
-                pulsaResult.data.forEach(p => {
-                    products.push({ ...p, tipe: 'pulsa', nama_barang: `${p.operator} ${p.nominal}`, harga_jual: p.harga_jual });
-                });
-            }
-            if (pembayaranResult.success) {
-                pembayaranResult.data.forEach(p => {
-                    products.push({ ...p, tipe: 'pembayaran', nama_barang: `${p.provider} - ${p.jenis_layanan}`, harga_jual: p.fee_jual });
-                });
-            }
-            if (servisResult.success) {
-                servisResult.data.forEach(s => {
-                    products.push({ ...s, tipe: 'servis', nama_barang: s.nama_servis, harga_jual: s.biaya_jasa });
-                });
-            }
             
-            konsumenList = konsumenResult.success ? konsumenResult.data : [];
+            konsumenList = (konsumenResult.success && konsumenResult.data) ? konsumenResult.data : [];
             
             renderPenjualan();
         }
@@ -839,15 +825,12 @@
             const filteredProducts = currentFilter === 'all' ? products : products.filter(p => p.tipe === currentFilter);
             
             const html = `
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div class="two-columns">
                     <div>
                         <h3>🛒 Pilih Produk</h3>
                         <div class="filter-tabs">
                             <div class="filter-tab ${currentFilter === 'all' ? 'active' : ''}" onclick="setFilter('all')">Semua</div>
                             <div class="filter-tab ${currentFilter === 'barang' ? 'active' : ''}" onclick="setFilter('barang')">Barang</div>
-                            <div class="filter-tab ${currentFilter === 'pulsa' ? 'active' : ''}" onclick="setFilter('pulsa')">Pulsa</div>
-                            <div class="filter-tab ${currentFilter === 'pembayaran' ? 'active' : ''}" onclick="setFilter('pembayaran')">Pembayaran</div>
-                            <div class="filter-tab ${currentFilter === 'servis' ? 'active' : ''}" onclick="setFilter('servis')">Servis</div>
                         </div>
                         <input type="text" class="product-search" placeholder="Cari produk..." id="searchProduct" onkeyup="searchProducts()">
                         <div class="product-grid" id="productGrid">
@@ -855,8 +838,10 @@
                                 <div class="product-card" onclick="addToCart('${p.id}', '${p.nama_barang}', ${p.harga_jual}, '${p.tipe}')">
                                     <div>${p.nama_barang}</div>
                                     <div class="price">Rp ${formatNumber(p.harga_jual)}</div>
+                                    <div style="font-size: 11px; color: var(--gray);">Stok: ${p.stok || 0}</div>
                                 </div>
                             `).join('')}
+                            ${filteredProducts.length === 0 ? '<p>Tidak ada produk</p>' : ''}
                         </div>
                     </div>
                     <div>
@@ -866,7 +851,7 @@
                             <input type="text" id="searchKonsumen" placeholder="Cari nama/email/telepon" onkeyup="searchKonsumen()">
                             <select id="pilihKonsumen" style="margin-top: 10px;">
                                 <option value="">Tanpa Konsumen</option>
-                                ${konsumenList.map(k => `<option value="${k.id}">${k.nama} (Poin: ${k.poin})</option>`).join('')}
+                                ${konsumenList.map(k => `<option value="${k.id}">${k.nama} (Poin: ${k.poin || 0})</option>`).join('')}
                             </select>
                         </div>
                         <div id="cartItems"></div>
@@ -911,6 +896,7 @@
                     <div class="product-card" onclick="addToCart('${p.id}', '${p.nama_barang}', ${p.harga_jual}, '${p.tipe}')">
                         <div>${p.nama_barang}</div>
                         <div class="price">Rp ${formatNumber(p.harga_jual)}</div>
+                        <div style="font-size: 11px; color: var(--gray);">Stok: ${p.stok || 0}</div>
                     </div>
                 `).join('');
             }
@@ -1002,7 +988,7 @@
             const select = document.getElementById('pilihKonsumen');
             if (select) {
                 select.innerHTML = '<option value="">Tanpa Konsumen</option>' + 
-                    filtered.map(k => `<option value="${k.id}">${k.nama} (${k.telepon || '-'}) - Poin: ${k.poin}</option>`).join('');
+                    filtered.map(k => `<option value="${k.id}">${k.nama} (${k.telepon || '-'}) - Poin: ${k.poin || 0}</option>`).join('');
             }
         }
 
@@ -1017,7 +1003,6 @@
             const metodeBayar = document.getElementById('metodeBayar')?.value || 'cash';
             const idKonsumen = document.getElementById('pilihKonsumen')?.value || '';
             
-            // Show payment modal
             const jumlahBayar = prompt(`Total Pembayaran: Rp ${formatNumber(grandTotal)}\nMasukkan jumlah bayar:`);
             if (!jumlahBayar) return;
             
@@ -1028,7 +1013,7 @@
             
             const kembalian = parseInt(jumlahBayar) - grandTotal;
             
-            const result = await apiCall('transaksi-penjualan', {
+            const result = await callApi('transaksi-penjualan', {
                 operation: 'create',
                 id_konsumen: idKonsumen,
                 total_bayar: jumlahBayar,
@@ -1037,7 +1022,7 @@
                 metode_pembayaran: metodeBayar,
                 dibuat_oleh: currentUser.email,
                 items: JSON.stringify(cart)
-            }, 'POST');
+            });
             
             if (result.success) {
                 showToast(`Transaksi berhasil! Kembalian: Rp ${formatNumber(kembalian)}`, 'success');
@@ -1048,409 +1033,17 @@
             }
         }
 
-        // ==================== MASTER BARANG ====================
-        async function loadBarang() {
-            const result = await apiCall('barang', { operation: 'read' });
-            const supplierResult = await apiCall('supplier', { operation: 'read' });
-            const suppliers = supplierResult.success ? supplierResult.data : [];
-            
-            const html = `
-                <button onclick="showBarangModal()" style="width: auto; margin-bottom: 20px;">+ Tambah Barang</button>
-                <div class="data-table">
-                    <table>
-                        <thead>
-                            <tr><th>Kode</th><th>Nama</th><th>Kategori</th><th>Harga Beli</th><th>Harga Jual</th><th>Stok</th><th>Aksi</th></tr>
-                        </thead>
-                        <tbody>
-                            ${result.success ? result.data.map(b => `
-                                <tr>
-                                    <td>${b.kode_barang || '-'}</td>
-                                    <td>${b.nama_barang}</td>
-                                    <td>${b.kategori}</td>
-                                    <td>Rp ${formatNumber(b.harga_beli)}</td>
-                                    <td>Rp ${formatNumber(b.harga_jual)}</td>
-                                    <td>${b.stok}</td>
-                                    <td>
-                                        <button onclick="editBarang('${b.id}')" style="width: auto; padding: 5px 10px; margin-right:5px;">Edit</button>
-                                        <button onclick="deleteBarang('${b.id}')" class="btn-danger" style="width: auto; padding: 5px 10px;">Hapus</button>
-                                    </td>
-                                </tr>
-                            `).join('') : '<tr><td colspan="7">Tidak ada data</td></tr>'}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-            document.getElementById('pageContent').innerHTML = html;
-            window.barangSuppliers = suppliers;
-        }
-
-        function showBarangModal(data = null) {
-            const isEdit = data !== null;
-            const modalHtml = `
-                <div id="barangModal" class="modal active">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h3>${isEdit ? 'Edit Barang' : 'Tambah Barang'}</h3>
-                            <span class="close-modal" onclick="closeBarangModal()">&times;</span>
-                        </div>
-                        <form id="barangForm">
-                            <input type="hidden" id="barangId" value="${isEdit ? data.id : ''}">
-                            <div class="form-group">
-                                <label>Kode Barang</label>
-                                <input type="text" id="kodeBarang" value="${isEdit ? data.kode_barang || '' : ''}">
-                            </div>
-                            <div class="form-group">
-                                <label>Nama Barang *</label>
-                                <input type="text" id="namaBarang" required value="${isEdit ? data.nama_barang : ''}">
-                            </div>
-                            <div class="form-group">
-                                <label>Kategori</label>
-                                <input type="text" id="kategori" value="${isEdit ? data.kategori : ''}">
-                            </div>
-                            <div class="form-group">
-                                <label>Harga Beli</label>
-                                <input type="number" id="hargaBeli" value="${isEdit ? data.harga_beli : '0'}">
-                            </div>
-                            <div class="form-group">
-                                <label>Harga Jual</label>
-                                <input type="number" id="hargaJual" value="${isEdit ? data.harga_jual : '0'}">
-                            </div>
-                            <div class="form-group">
-                                <label>Stok</label>
-                                <input type="number" id="stok" value="${isEdit ? data.stok : '0'}">
-                            </div>
-                            <div class="form-group">
-                                <label>Supplier</label>
-                                <select id="idSupplier">
-                                    <option value="">Pilih Supplier</option>
-                                    ${window.barangSuppliers ? window.barangSuppliers.map(s => `<option value="${s.id}" ${isEdit && data.id_supplier === s.id ? 'selected' : ''}>${s.nama_supplier}</option>`).join('') : ''}
-                                </select>
-                            </div>
-                            <button type="submit">Simpan</button>
-                        </form>
-                    </div>
-                </div>
-            `;
-            
-            // Remove existing modal if any
-            const existingModal = document.getElementById('barangModal');
-            if (existingModal) existingModal.remove();
-            
-            document.body.insertAdjacentHTML('beforeend', modalHtml);
-            
-            document.getElementById('barangForm').onsubmit = async (e) => {
-                e.preventDefault();
-                const id = document.getElementById('barangId').value;
-                const params = {
-                    operation: id ? 'update' : 'create',
-                    id: id,
-                    kode_barang: document.getElementById('kodeBarang').value,
-                    nama_barang: document.getElementById('namaBarang').value,
-                    kategori: document.getElementById('kategori').value,
-                    harga_beli: document.getElementById('hargaBeli').value,
-                    harga_jual: document.getElementById('hargaJual').value,
-                    stok: document.getElementById('stok').value,
-                    id_supplier: document.getElementById('idSupplier').value
-                };
-                
-                const result = await apiCall('barang', params, 'POST');
-                if (result.success) {
-                    showToast(result.message);
-                    closeBarangModal();
-                    loadBarang();
-                } else {
-                    showToast(result.message, 'error');
-                }
-            };
-        }
-
-        function closeBarangModal() {
-            const modal = document.getElementById('barangModal');
-            if (modal) modal.remove();
-        }
-
-        async function editBarang(id) {
-            const result = await apiCall('barang', { operation: 'read' });
-            if (result.success) {
-                const barang = result.data.find(b => b.id === id);
-                if (barang) {
-                    showBarangModal(barang);
-                }
-            }
-        }
-
-        async function deleteBarang(id) {
-            if (confirm('Yakin ingin menghapus barang ini?')) {
-                const result = await apiCall('barang', { operation: 'delete', id: id }, 'POST');
-                if (result.success) {
-                    showToast(result.message);
-                    loadBarang();
-                } else {
-                    showToast(result.message, 'error');
-                }
-            }
-        }
-
-        // ==================== MASTER SUPPLIER ====================
-        async function loadSupplier() {
-            const result = await apiCall('supplier', { operation: 'read' });
-            const html = `
-                <button onclick="showSupplierModal()" style="width: auto; margin-bottom: 20px;">+ Tambah Supplier</button>
-                <div class="data-table">
-                    <table>
-                        <thead>
-                            <tr><th>Nama</th><th>Kontak</th><th>Alamat</th><th>Email</th><th>Aksi</th></tr>
-                        </thead>
-                        <tbody>
-                            ${result.success ? result.data.map(s => `
-                                <tr>
-                                    <td>${s.nama_supplier}</td>
-                                    <td>${s.kontak || '-'}</td>
-                                    <td>${s.alamat || '-'}</td>
-                                    <td>${s.email || '-'}</td>
-                                    <td>
-                                        <button onclick="editSupplier('${s.id}')" style="width: auto; padding: 5px 10px; margin-right:5px;">Edit</button>
-                                        <button onclick="deleteSupplier('${s.id}')" class="btn-danger" style="width: auto; padding: 5px 10px;">Hapus</button>
-                                    </td>
-                                </tr>
-                            `).join('') : '<tr><td colspan="5">Tidak ada data</td></tr>'}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-            document.getElementById('pageContent').innerHTML = html;
-        }
-
-        function showSupplierModal(data = null) {
-            const isEdit = data !== null;
-            const modalHtml = `
-                <div id="supplierModal" class="modal active">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h3>${isEdit ? 'Edit Supplier' : 'Tambah Supplier'}</h3>
-                            <span class="close-modal" onclick="closeSupplierModal()">&times;</span>
-                        </div>
-                        <form id="supplierForm">
-                            <input type="hidden" id="supplierId" value="${isEdit ? data.id : ''}">
-                            <div class="form-group">
-                                <label>Nama Supplier *</label>
-                                <input type="text" id="namaSupplier" required value="${isEdit ? data.nama_supplier : ''}">
-                            </div>
-                            <div class="form-group">
-                                <label>Kontak</label>
-                                <input type="text" id="kontak" value="${isEdit ? data.kontak || '' : ''}">
-                            </div>
-                            <div class="form-group">
-                                <label>Alamat</label>
-                                <textarea id="alamat">${isEdit ? data.alamat || '' : ''}</textarea>
-                            </div>
-                            <div class="form-group">
-                                <label>Email</label>
-                                <input type="email" id="email" value="${isEdit ? data.email || '' : ''}">
-                            </div>
-                            <div class="form-group">
-                                <label>Catatan</label>
-                                <textarea id="catatan">${isEdit ? data.catatan || '' : ''}</textarea>
-                            </div>
-                            <button type="submit">Simpan</button>
-                        </form>
-                    </div>
-                </div>
-            `;
-            
-            const existingModal = document.getElementById('supplierModal');
-            if (existingModal) existingModal.remove();
-            
-            document.body.insertAdjacentHTML('beforeend', modalHtml);
-            
-            document.getElementById('supplierForm').onsubmit = async (e) => {
-                e.preventDefault();
-                const id = document.getElementById('supplierId').value;
-                const params = {
-                    operation: id ? 'update' : 'create',
-                    id: id,
-                    nama_supplier: document.getElementById('namaSupplier').value,
-                    kontak: document.getElementById('kontak').value,
-                    alamat: document.getElementById('alamat').value,
-                    email: document.getElementById('email').value,
-                    catatan: document.getElementById('catatan').value
-                };
-                
-                const result = await apiCall('supplier', params, 'POST');
-                if (result.success) {
-                    showToast(result.message);
-                    closeSupplierModal();
-                    loadSupplier();
-                } else {
-                    showToast(result.message, 'error');
-                }
-            };
-        }
-
-        function closeSupplierModal() {
-            const modal = document.getElementById('supplierModal');
-            if (modal) modal.remove();
-        }
-
-        async function editSupplier(id) {
-            const result = await apiCall('supplier', { operation: 'read' });
-            if (result.success) {
-                const supplier = result.data.find(s => s.id === id);
-                if (supplier) {
-                    showSupplierModal(supplier);
-                }
-            }
-        }
-
-        async function deleteSupplier(id) {
-            if (confirm('Yakin ingin menghapus supplier ini?')) {
-                const result = await apiCall('supplier', { operation: 'delete', id: id }, 'POST');
-                if (result.success) {
-                    showToast(result.message);
-                    loadSupplier();
-                } else {
-                    showToast(result.message, 'error');
-                }
-            }
-        }
-
-        // ==================== MASTER KONSUMEN ====================
-        async function loadKonsumen() {
-            const result = await apiCall('konsumen', { operation: 'read' });
-            const html = `
-                <button onclick="showKonsumenModal()" style="width: auto; margin-bottom: 20px;">+ Tambah Konsumen</button>
-                <div class="data-table">
-                    <table>
-                        <thead>
-                            <tr><th>Nama</th><th>Email</th><th>Telepon</th><th>Alamat</th><th>Poin</th><th>Aksi</th></tr>
-                        </thead>
-                        <tbody>
-                            ${result.success ? result.data.map(k => `
-                                <tr>
-                                    <td>${k.nama}</td>
-                                    <td>${k.email || '-'}</td>
-                                    <td>${k.telepon || '-'}</td>
-                                    <td>${k.alamat || '-'}</td>
-                                    <td>${k.poin}</td>
-                                    <td>
-                                        <button onclick="editKonsumen('${k.id}')" style="width: auto; padding: 5px 10px; margin-right:5px;">Edit</button>
-                                        <button onclick="deleteKonsumen('${k.id}')" class="btn-danger" style="width: auto; padding: 5px 10px;">Hapus</button>
-                                    </td>
-                                </tr>
-                            `).join('') : '<tr><td colspan="6">Tidak ada data</td></tr>'}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-            document.getElementById('pageContent').innerHTML = html;
-        }
-
-        function showKonsumenModal(data = null) {
-            const isEdit = data !== null;
-            const modalHtml = `
-                <div id="konsumenModal" class="modal active">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h3>${isEdit ? 'Edit Konsumen' : 'Tambah Konsumen'}</h3>
-                            <span class="close-modal" onclick="closeKonsumenModal()">&times;</span>
-                        </div>
-                        <form id="konsumenForm">
-                            <input type="hidden" id="konsumenId" value="${isEdit ? data.id : ''}">
-                            <div class="form-group">
-                                <label>Nama *</label>
-                                <input type="text" id="namaKonsumen" required value="${isEdit ? data.nama : ''}">
-                            </div>
-                            <div class="form-group">
-                                <label>Email</label>
-                                <input type="email" id="emailKonsumen" value="${isEdit ? data.email || '' : ''}">
-                            </div>
-                            <div class="form-group">
-                                <label>Telepon</label>
-                                <input type="text" id="teleponKonsumen" value="${isEdit ? data.telepon || '' : ''}">
-                            </div>
-                            <div class="form-group">
-                                <label>Alamat</label>
-                                <textarea id="alamatKonsumen">${isEdit ? data.alamat || '' : ''}</textarea>
-                            </div>
-                            <div class="form-group">
-                                <label>Poin</label>
-                                <input type="number" id="poinKonsumen" value="${isEdit ? data.poin || '0' : '0'}">
-                            </div>
-                            <button type="submit">Simpan</button>
-                        </form>
-                    </div>
-                </div>
-            `;
-            
-            const existingModal = document.getElementById('konsumenModal');
-            if (existingModal) existingModal.remove();
-            
-            document.body.insertAdjacentHTML('beforeend', modalHtml);
-            
-            document.getElementById('konsumenForm').onsubmit = async (e) => {
-                e.preventDefault();
-                const id = document.getElementById('konsumenId').value;
-                const params = {
-                    operation: id ? 'update' : 'create',
-                    id: id,
-                    nama: document.getElementById('namaKonsumen').value,
-                    email: document.getElementById('emailKonsumen').value,
-                    telepon: document.getElementById('teleponKonsumen').value,
-                    alamat: document.getElementById('alamatKonsumen').value,
-                    poin: document.getElementById('poinKonsumen').value
-                };
-                
-                const result = await apiCall('konsumen', params, 'POST');
-                if (result.success) {
-                    showToast(result.message);
-                    closeKonsumenModal();
-                    loadKonsumen();
-                } else {
-                    showToast(result.message, 'error');
-                }
-            };
-        }
-
-        function closeKonsumenModal() {
-            const modal = document.getElementById('konsumenModal');
-            if (modal) modal.remove();
-        }
-
-        async function editKonsumen(id) {
-            const result = await apiCall('konsumen', { operation: 'read' });
-            if (result.success) {
-                const konsumen = result.data.find(k => k.id === id);
-                if (konsumen) {
-                    showKonsumenModal(konsumen);
-                }
-            }
-        }
-
-        async function deleteKonsumen(id) {
-            if (confirm('Yakin ingin menghapus konsumen ini?')) {
-                const result = await apiCall('konsumen', { operation: 'delete', id: id }, 'POST');
-                if (result.success) {
-                    showToast(result.message);
-                    loadKonsumen();
-                } else {
-                    showToast(result.message, 'error');
-                }
-            }
-        }
-
         // ==================== PEMBELIAN (RESTOCK) ====================
-        let purchaseCart = [];
-        let purchaseProducts = [];
-
         async function loadPembelian() {
-            const barangResult = await apiCall('barang', { operation: 'read' });
-            const supplierResult = await apiCall('supplier', { operation: 'read' });
+            const barangResult = await callApi('barang', { operation: 'read' });
+            const supplierResult = await callApi('supplier', { operation: 'read' });
             
-            purchaseProducts = barangResult.success ? barangResult.data : [];
-            const suppliers = supplierResult.success ? supplierResult.data : [];
+            const purchaseProducts = (barangResult.success && barangResult.data) ? barangResult.data : [];
+            suppliersList = (supplierResult.success && supplierResult.data) ? supplierResult.data : [];
+            purchaseCart = [];
             
             const html = `
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div class="two-columns">
                     <div>
                         <h3>📦 Pilih Barang</h3>
                         <input type="text" class="product-search" placeholder="Cari barang..." id="searchPurchaseProduct" onkeyup="searchPurchaseProducts()">
@@ -1469,7 +1062,7 @@
                             <label>Pilih Supplier</label>
                             <select id="pilihSupplier">
                                 <option value="">Pilih Supplier</option>
-                                ${suppliers.map(s => `<option value="${s.id}">${s.nama_supplier}</option>`).join('')}
+                                ${suppliersList.map(s => `<option value="${s.id}">${s.nama_supplier}</option>`).join('')}
                             </select>
                         </div>
                         <div class="form-group">
@@ -1487,7 +1080,7 @@
                         <div id="purchaseCartItems"></div>
                         <div class="form-group">
                             <label>Total Biaya</label>
-                            <input type="text" id="totalBiaya" readonly style="background:#f0f0f0; font-size:20px; font-weight:bold;">
+                            <input type="text" id="totalBiaya" readonly style="background:#f0f0f0; font-size:18px; font-weight:bold;">
                         </div>
                         <button onclick="prosesPembelian()" class="btn-success">💾 Simpan Pembelian</button>
                     </div>
@@ -1495,11 +1088,14 @@
             `;
             document.getElementById('pageContent').innerHTML = html;
             updatePurchaseCartDisplay();
+            
+            // Store purchaseProducts for search
+            window.purchaseProducts = purchaseProducts;
         }
 
         function searchPurchaseProducts() {
             const searchTerm = document.getElementById('searchPurchaseProduct')?.value.toLowerCase() || '';
-            const filtered = purchaseProducts.filter(p => p.nama_barang.toLowerCase().includes(searchTerm));
+            const filtered = (window.purchaseProducts || []).filter(p => p.nama_barang.toLowerCase().includes(searchTerm));
             const grid = document.getElementById('purchaseProductGrid');
             if (grid) {
                 grid.innerHTML = filtered.map(p => `
@@ -1600,15 +1196,19 @@
             const statusPembayaran = document.getElementById('statusPembayaran')?.value || 'lunas';
             const catatan = document.getElementById('catatanPembelian')?.value || '';
             
-            const result = await apiCall('transaksi-pembelian', {
+            const result = await callApi('transaksi-pembelian', {
                 operation: 'create',
                 id_supplier: idSupplier,
                 total_biaya: totalBiaya,
                 status_pembayaran: statusPembayaran,
                 catatan: catatan,
                 dibuat_oleh: currentUser.email,
-                items: JSON.stringify(purchaseCart)
-            }, 'POST');
+                items: JSON.stringify(purchaseCart.map(item => ({
+                    id_barang: item.id_barang,
+                    qty: item.qty,
+                    harga_beli: item.harga_beli
+                })))
+            });
             
             if (result.success) {
                 showToast('Pembelian berhasil! Stok telah diperbarui', 'success');
@@ -1619,31 +1219,33 @@
             }
         }
 
-        // ==================== PULSA, PEMBAYARAN, SERVIS (Similar pattern) ====================
-        async function loadPulsa() {
-            const result = await apiCall('pulsa', { operation: 'read' });
+        // ==================== MASTER BARANG ====================
+        async function loadBarang() {
+            const result = await callApi('barang', { operation: 'read' });
+            
             const html = `
-                <button onclick="showPulsaModal()" style="width: auto; margin-bottom: 20px;">+ Tambah Pulsa</button>
+                <button onclick="showBarangModal()" style="width: auto; margin-bottom: 20px;">+ Tambah Barang</button>
                 <div class="data-table">
                     <table>
                         <thead>
-                            <tr><th>Operator</th><th>Nominal</th><th>Harga Beli</th><th>Harga Jual</th><th>Stok Deposit</th><th>Status</th><th>Aksi</th></tr>
+                            <tr><th>ID</th><th>Kode</th><th>Nama</th><th>Kategori</th><th>Harga Beli</th><th>Harga Jual</th><th>Stok</th><th>Aksi</th></tr>
                         </thead>
                         <tbody>
-                            ${result.success ? result.data.map(p => `
+                            ${result.success && result.data ? result.data.map(b => `
                                 <tr>
-                                    <td>${p.operator}</td>
-                                    <td>${p.nominal}</td>
-                                    <td>Rp ${formatNumber(p.harga_beli)}</td>
-                                    <td>Rp ${formatNumber(p.harga_jual)}</td>
-                                    <td>${p.stok_deposit}</td>
-                                    <td>${p.status}</td>
+                                    <td>${b.id}</td>
+                                    <td>${b.kode_barang || '-'}</td>
+                                    <td>${b.nama_barang}</td>
+                                    <td>${b.kategori || '-'}</td>
+                                    <td>Rp ${formatNumber(b.harga_beli)}</td>
+                                    <td>Rp ${formatNumber(b.harga_jual)}</td>
+                                    <td>${b.stok}</td>
                                     <td>
-                                        <button onclick="editPulsa('${p.id}')" style="width: auto; padding: 5px 10px; margin-right:5px;">Edit</button>
-                                        <button onclick="deletePulsa('${p.id}')" class="btn-danger" style="width: auto; padding: 5px 10px;">Hapus</button>
+                                        <button onclick="editBarang('${b.id}')" style="width: auto; padding: 5px 10px; margin-right:5px;">Edit</button>
+                                        <button onclick="deleteBarang('${b.id}')" class="btn-danger" style="width: auto; padding: 5px 10px;">Hapus</button>
                                     </td>
                                 </tr>
-                            `).join('') : '<tr><td colspan="7">Tidak ada data</td></tr>'}
+                            `).join('') : '<tr><td colspan="8">Tidak ada data</td></tr>'}
                         </tbody>
                     </table>
                 </div>
@@ -1651,322 +1253,40 @@
             document.getElementById('pageContent').innerHTML = html;
         }
 
-        function showPulsaModal(data = null) {
+        function showBarangModal(data = null) {
             const isEdit = data !== null;
             const modalHtml = `
-                <div id="pulsaModal" class="modal active">
+                <div id="barangModal" class="modal active">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h3>${isEdit ? 'Edit Pulsa' : 'Tambah Pulsa'}</h3>
-                            <span class="close-modal" onclick="closePulsaModal()">&times;</span>
+                            <h3>${isEdit ? 'Edit Barang' : 'Tambah Barang'}</h3>
+                            <span class="close-modal" onclick="closeBarangModal()">&times;</span>
                         </div>
-                        <form id="pulsaForm">
-                            <input type="hidden" id="pulsaId" value="${isEdit ? data.id : ''}">
+                        <form id="barangForm">
+                            <input type="hidden" id="barangId" value="${isEdit ? data.id : ''}">
                             <div class="form-group">
-                                <label>ID Barang (relasi)</label>
-                                <input type="text" id="idBarangPulsa" value="${isEdit ? data.id_barang || '' : ''}">
+                                <label>Kode Barang</label>
+                                <input type="text" id="kodeBarang" value="${isEdit ? data.kode_barang || '' : ''}">
                             </div>
                             <div class="form-group">
-                                <label>Operator *</label>
-                                <input type="text" id="operator" required value="${isEdit ? data.operator : ''}">
-                            </div>
-                            <div class="form-group">
-                                <label>Nominal</label>
-                                <input type="text" id="nominal" value="${isEdit ? data.nominal : ''}">
-                            </div>
-                            <div class="form-group">
-                                <label>Harga Beli</label>
-                                <input type="number" id="hargaBeliPulsa" value="${isEdit ? data.harga_beli : '0'}">
-                            </div>
-                            <div class="form-group">
-                                <label>Harga Jual</label>
-                                <input type="number" id="hargaJualPulsa" value="${isEdit ? data.harga_jual : '0'}">
-                            </div>
-                            <div class="form-group">
-                                <label>Stok Deposit</label>
-                                <input type="number" id="stokDeposit" value="${isEdit ? data.stok_deposit : '0'}">
-                            </div>
-                            <div class="form-group">
-                                <label>Status</label>
-                                <select id="statusPulsa">
-                                    <option value="aktif" ${isEdit && data.status === 'aktif' ? 'selected' : ''}>Aktif</option>
-                                    <option value="nonaktif" ${isEdit && data.status === 'nonaktif' ? 'selected' : ''}>Nonaktif</option>
-                                </select>
-                            </div>
-                            <button type="submit">Simpan</button>
-                        </form>
-                    </div>
-                </div>
-            `;
-            
-            const existingModal = document.getElementById('pulsaModal');
-            if (existingModal) existingModal.remove();
-            
-            document.body.insertAdjacentHTML('beforeend', modalHtml);
-            
-            document.getElementById('pulsaForm').onsubmit = async (e) => {
-                e.preventDefault();
-                const id = document.getElementById('pulsaId').value;
-                const params = {
-                    operation: id ? 'update' : 'create',
-                    id: id,
-                    id_barang: document.getElementById('idBarangPulsa').value,
-                    operator: document.getElementById('operator').value,
-                    nominal: document.getElementById('nominal').value,
-                    harga_beli: document.getElementById('hargaBeliPulsa').value,
-                    harga_jual: document.getElementById('hargaJualPulsa').value,
-                    stok_deposit: document.getElementById('stokDeposit').value,
-                    status: document.getElementById('statusPulsa').value
-                };
-                
-                const result = await apiCall('pulsa', params, 'POST');
-                if (result.success) {
-                    showToast(result.message);
-                    closePulsaModal();
-                    loadPulsa();
-                } else {
-                    showToast(result.message, 'error');
-                }
-            };
-        }
-
-        function closePulsaModal() {
-            const modal = document.getElementById('pulsaModal');
-            if (modal) modal.remove();
-        }
-
-        async function editPulsa(id) {
-            const result = await apiCall('pulsa', { operation: 'read' });
-            if (result.success) {
-                const pulsa = result.data.find(p => p.id === id);
-                if (pulsa) {
-                    showPulsaModal(pulsa);
-                }
-            }
-        }
-
-        async function deletePulsa(id) {
-            if (confirm('Yakin ingin menghapus pulsa ini?')) {
-                const result = await apiCall('pulsa', { operation: 'delete', id: id }, 'POST');
-                if (result.success) {
-                    showToast(result.message);
-                    loadPulsa();
-                } else {
-                    showToast(result.message, 'error');
-                }
-            }
-        }
-
-        // Simplified for Pembayaran and Servis (similar pattern)
-        async function loadPembayaran() {
-            const result = await apiCall('pembayaran', { operation: 'read' });
-            const html = `
-                <button onclick="showPembayaranModal()" style="width: auto; margin-bottom: 20px;">+ Tambah Pembayaran Online</button>
-                <div class="data-table">
-                    <table>
-                        <thead>
-                            <tr><th>Provider</th><th>Jenis Layanan</th><th>Fee Beli</th><th>Fee Jual</th><th>Stok Deposit</th><th>Status</th><th>Aksi</th></tr>
-                        </thead>
-                        <tbody>
-                            ${result.success ? result.data.map(p => `
-                                <tr>
-                                    <td>${p.provider}</td>
-                                    <td>${p.jenis_layanan}</td>
-                                    <td>Rp ${formatNumber(p.fee_beli)}</td>
-                                    <td>Rp ${formatNumber(p.fee_jual)}</td>
-                                    <td>${p.stok_deposit}</td>
-                                    <td>${p.status}</td>
-                                    <td>
-                                        <button onclick="editPembayaran('${p.id}')" style="width: auto; padding: 5px 10px; margin-right:5px;">Edit</button>
-                                        <button onclick="deletePembayaran('${p.id}')" class="btn-danger" style="width: auto; padding: 5px 10px;">Hapus</button>
-                                    </td>
-                                </tr>
-                            `).join('') : '<tr><td colspan="7">Tidak ada data</td></tr>'}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-            document.getElementById('pageContent').innerHTML = html;
-        }
-
-        function showPembayaranModal(data = null) {
-            const isEdit = data !== null;
-            const modalHtml = `
-                <div id="pembayaranModal" class="modal active">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h3>${isEdit ? 'Edit Pembayaran' : 'Tambah Pembayaran'}</h3>
-                            <span class="close-modal" onclick="closePembayaranModal()">&times;</span>
-                        </div>
-                        <form id="pembayaranForm">
-                            <input type="hidden" id="pembayaranId" value="${isEdit ? data.id : ''}">
-                            <div class="form-group">
-                                <label>ID Barang (relasi)</label>
-                                <input type="text" id="idBarangPembayaran" value="${isEdit ? data.id_barang || '' : ''}">
-                            </div>
-                            <div class="form-group">
-                                <label>Provider *</label>
-                                <input type="text" id="provider" required value="${isEdit ? data.provider : ''}">
-                            </div>
-                            <div class="form-group">
-                                <label>Jenis Layanan</label>
-                                <input type="text" id="jenisLayanan" value="${isEdit ? data.jenis_layanan : ''}">
-                            </div>
-                            <div class="form-group">
-                                <label>Fee Beli</label>
-                                <input type="number" id="feeBeli" value="${isEdit ? data.fee_beli : '0'}">
-                            </div>
-                            <div class="form-group">
-                                <label>Fee Jual</label>
-                                <input type="number" id="feeJual" value="${isEdit ? data.fee_jual : '0'}">
-                            </div>
-                            <div class="form-group">
-                                <label>Stok Deposit</label>
-                                <input type="number" id="stokDepositPembayaran" value="${isEdit ? data.stok_deposit : '0'}">
-                            </div>
-                            <div class="form-group">
-                                <label>Status</label>
-                                <select id="statusPembayaran">
-                                    <option value="aktif" ${isEdit && data.status === 'aktif' ? 'selected' : ''}>Aktif</option>
-                                    <option value="nonaktif" ${isEdit && data.status === 'nonaktif' ? 'selected' : ''}>Nonaktif</option>
-                                </select>
-                            </div>
-                            <button type="submit">Simpan</button>
-                        </form>
-                    </div>
-                </div>
-            `;
-            
-            const existingModal = document.getElementById('pembayaranModal');
-            if (existingModal) existingModal.remove();
-            
-            document.body.insertAdjacentHTML('beforeend', modalHtml);
-            
-            document.getElementById('pembayaranForm').onsubmit = async (e) => {
-                e.preventDefault();
-                const id = document.getElementById('pembayaranId').value;
-                const params = {
-                    operation: id ? 'update' : 'create',
-                    id: id,
-                    id_barang: document.getElementById('idBarangPembayaran').value,
-                    provider: document.getElementById('provider').value,
-                    jenis_layanan: document.getElementById('jenisLayanan').value,
-                    fee_beli: document.getElementById('feeBeli').value,
-                    fee_jual: document.getElementById('feeJual').value,
-                    stok_deposit: document.getElementById('stokDepositPembayaran').value,
-                    status: document.getElementById('statusPembayaran').value
-                };
-                
-                const result = await apiCall('pembayaran', params, 'POST');
-                if (result.success) {
-                    showToast(result.message);
-                    closePembayaranModal();
-                    loadPembayaran();
-                } else {
-                    showToast(result.message, 'error');
-                }
-            };
-        }
-
-        function closePembayaranModal() {
-            const modal = document.getElementById('pembayaranModal');
-            if (modal) modal.remove();
-        }
-
-        async function editPembayaran(id) {
-            const result = await apiCall('pembayaran', { operation: 'read' });
-            if (result.success) {
-                const pembayaran = result.data.find(p => p.id === id);
-                if (pembayaran) {
-                    showPembayaranModal(pembayaran);
-                }
-            }
-        }
-
-        async function deletePembayaran(id) {
-            if (confirm('Yakin ingin menghapus pembayaran ini?')) {
-                const result = await apiCall('pembayaran', { operation: 'delete', id: id }, 'POST');
-                if (result.success) {
-                    showToast(result.message);
-                    loadPembayaran();
-                } else {
-                    showToast(result.message, 'error');
-                }
-            }
-        }
-
-        async function loadServis() {
-            const result = await apiCall('servis', { operation: 'read' });
-            const html = `
-                <button onclick="showServisModal()" style="width: auto; margin-bottom: 20px;">+ Tambah Servis</button>
-                <div class="data-table">
-                    <table>
-                        <thead>
-                            <tr><th>Nama Servis</th><th>Kategori</th><th>Biaya Jasa</th><th>Estimasi Hari</th><th>Garansi Hari</th><th>Status</th><th>Aksi</th></tr>
-                        </thead>
-                        <tbody>
-                            ${result.success ? result.data.map(s => `
-                                <tr>
-                                    <td>${s.nama_servis}</td>
-                                    <td>${s.kategori || '-'}</td>
-                                    <td>Rp ${formatNumber(s.biaya_jasa)}</td>
-                                    <td>${s.estimasi_hari}</td>
-                                    <td>${s.garansi_hari}</td>
-                                    <td>${s.status}</td>
-                                    <td>
-                                        <button onclick="editServis('${s.id}')" style="width: auto; padding: 5px 10px; margin-right:5px;">Edit</button>
-                                        <button onclick="deleteServis('${s.id}')" class="btn-danger" style="width: auto; padding: 5px 10px;">Hapus</button>
-                                    </td>
-                                </tr>
-                            `).join('') : '<tr><td colspan="7">Tidak ada数据</tr>'}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-            document.getElementById('pageContent').innerHTML = html;
-        }
-
-        function showServisModal(data = null) {
-            const isEdit = data !== null;
-            const modalHtml = `
-                <div id="servisModal" class="modal active">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h3>${isEdit ? 'Edit Servis' : 'Tambah Servis'}</h3>
-                            <span class="close-modal" onclick="closeServisModal()">&times;</span>
-                        </div>
-                        <form id="servisForm">
-                            <input type="hidden" id="servisId" value="${isEdit ? data.id : ''}">
-                            <div class="form-group">
-                                <label>Nama Servis *</label>
-                                <input type="text" id="namaServis" required value="${isEdit ? data.nama_servis : ''}">
+                                <label>Nama Barang *</label>
+                                <input type="text" id="namaBarang" required value="${isEdit ? data.nama_barang : ''}">
                             </div>
                             <div class="form-group">
                                 <label>Kategori</label>
-                                <input type="text" id="kategoriServis" value="${isEdit ? data.kategori || '' : ''}">
+                                <input type="text" id="kategori" value="${isEdit ? data.kategori || '' : ''}">
                             </div>
                             <div class="form-group">
-                                <label>Biaya Jasa</label>
-                                <input type="number" id="biayaJasa" value="${isEdit ? data.biaya_jasa : '0'}">
+                                <label>Harga Beli</label>
+                                <input type="number" id="hargaBeli" value="${isEdit ? data.harga_beli : '0'}">
                             </div>
                             <div class="form-group">
-                                <label>Estimasi Hari</label>
-                                <input type="number" id="estimasiHari" value="${isEdit ? data.estimasi_hari : '1'}">
+                                <label>Harga Jual</label>
+                                <input type="number" id="hargaJual" value="${isEdit ? data.harga_jual : '0'}">
                             </div>
                             <div class="form-group">
-                                <label>Garansi Hari</label>
-                                <input type="number" id="garansiHari" value="${isEdit ? data.garansi_hari : '0'}">
-                            </div>
-                            <div class="form-group">
-                                <label>ID Part Default</label>
-                                <input type="text" id="idPartDefault" value="${isEdit ? data.id_part_default || '' : ''}">
-                            </div>
-                            <div class="form-group">
-                                <label>Status</label>
-                                <select id="statusServis">
-                                    <option value="aktif" ${isEdit && data.status === 'aktif' ? 'selected' : ''}>Aktif</option>
-                                    <option value="nonaktif" ${isEdit && data.status === 'nonaktif' ? 'selected' : ''}>Nonaktif</option>
-                                </select>
+                                <label>Stok</label>
+                                <input type="number" id="stok" value="${isEdit ? data.stok : '0'}">
                             </div>
                             <button type="submit">Simpan</button>
                         </form>
@@ -1974,58 +1294,306 @@
                 </div>
             `;
             
-            const existingModal = document.getElementById('servisModal');
+            const existingModal = document.getElementById('barangModal');
             if (existingModal) existingModal.remove();
             
             document.body.insertAdjacentHTML('beforeend', modalHtml);
             
-            document.getElementById('servisForm').onsubmit = async (e) => {
+            document.getElementById('barangForm').onsubmit = async (e) => {
                 e.preventDefault();
-                const id = document.getElementById('servisId').value;
+                const id = document.getElementById('barangId').value;
                 const params = {
                     operation: id ? 'update' : 'create',
                     id: id,
-                    nama_servis: document.getElementById('namaServis').value,
-                    kategori: document.getElementById('kategoriServis').value,
-                    biaya_jasa: document.getElementById('biayaJasa').value,
-                    estimasi_hari: document.getElementById('estimasiHari').value,
-                    garansi_hari: document.getElementById('garansiHari').value,
-                    id_part_default: document.getElementById('idPartDefault').value,
-                    status: document.getElementById('statusServis').value
+                    kode_barang: document.getElementById('kodeBarang').value,
+                    nama_barang: document.getElementById('namaBarang').value,
+                    kategori: document.getElementById('kategori').value,
+                    harga_beli: document.getElementById('hargaBeli').value,
+                    harga_jual: document.getElementById('hargaJual').value,
+                    stok: document.getElementById('stok').value
                 };
                 
-                const result = await apiCall('servis', params, 'POST');
+                const result = await callApi('barang', params);
                 if (result.success) {
                     showToast(result.message);
-                    closeServisModal();
-                    loadServis();
+                    closeBarangModal();
+                    loadBarang();
                 } else {
                     showToast(result.message, 'error');
                 }
             };
         }
 
-        function closeServisModal() {
-            const modal = document.getElementById('servisModal');
+        function closeBarangModal() {
+            const modal = document.getElementById('barangModal');
             if (modal) modal.remove();
         }
 
-        async function editServis(id) {
-            const result = await apiCall('servis', { operation: 'read' });
-            if (result.success) {
-                const servis = result.data.find(s => s.id === id);
-                if (servis) {
-                    showServisModal(servis);
+        async function editBarang(id) {
+            const result = await callApi('barang', { operation: 'read' });
+            if (result.success && result.data) {
+                const barang = result.data.find(b => b.id === id);
+                if (barang) {
+                    showBarangModal(barang);
                 }
             }
         }
 
-        async function deleteServis(id) {
-            if (confirm('Yakin ingin menghapus servis ini?')) {
-                const result = await apiCall('servis', { operation: 'delete', id: id }, 'POST');
+        async function deleteBarang(id) {
+            if (confirm('Yakin ingin menghapus barang ini?')) {
+                const result = await callApi('barang', { operation: 'delete', id: id });
                 if (result.success) {
                     showToast(result.message);
-                    loadServis();
+                    loadBarang();
+                } else {
+                    showToast(result.message, 'error');
+                }
+            }
+        }
+
+        // ==================== MASTER SUPPLIER ====================
+        async function loadSupplier() {
+            const result = await callApi('supplier', { operation: 'read' });
+            const html = `
+                <button onclick="showSupplierModal()" style="width: auto; margin-bottom: 20px;">+ Tambah Supplier</button>
+                <div class="data-table">
+                    <table>
+                        <thead>
+                            <tr><th>ID</th><th>Nama</th><th>Kontak</th><th>Alamat</th><th>Email</th><th>Aksi</th></tr>
+                        </thead>
+                        <tbody>
+                            ${result.success && result.data ? result.data.map(s => `
+                                <tr>
+                                    <td>${s.id}</td>
+                                    <td>${s.nama_supplier}</td>
+                                    <td>${s.kontak || '-'}</td>
+                                    <td>${s.alamat || '-'}</td>
+                                    <td>${s.email || '-'}</td>
+                                    <td>
+                                        <button onclick="editSupplier('${s.id}')" style="width: auto; padding: 5px 10px; margin-right:5px;">Edit</button>
+                                        <button onclick="deleteSupplier('${s.id}')" class="btn-danger" style="width: auto; padding: 5px 10px;">Hapus</button>
+                                    </td>
+                                </tr>
+                            `).join('') : '<tr><td colspan="6">Tidak ada data</td></tr>'}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            document.getElementById('pageContent').innerHTML = html;
+        }
+
+        function showSupplierModal(data = null) {
+            const isEdit = data !== null;
+            const modalHtml = `
+                <div id="supplierModal" class="modal active">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3>${isEdit ? 'Edit Supplier' : 'Tambah Supplier'}</h3>
+                            <span class="close-modal" onclick="closeSupplierModal()">&times;</span>
+                        </div>
+                        <form id="supplierForm">
+                            <input type="hidden" id="supplierId" value="${isEdit ? data.id : ''}">
+                            <div class="form-group">
+                                <label>Nama Supplier *</label>
+                                <input type="text" id="namaSupplier" required value="${isEdit ? data.nama_supplier : ''}">
+                            </div>
+                            <div class="form-group">
+                                <label>Kontak</label>
+                                <input type="text" id="kontak" value="${isEdit ? data.kontak || '' : ''}">
+                            </div>
+                            <div class="form-group">
+                                <label>Alamat</label>
+                                <textarea id="alamat">${isEdit ? data.alamat || '' : ''}</textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Email</label>
+                                <input type="email" id="email" value="${isEdit ? data.email || '' : ''}">
+                            </div>
+                            <div class="form-group">
+                                <label>Catatan</label>
+                                <textarea id="catatan">${isEdit ? data.catatan || '' : ''}</textarea>
+                            </div>
+                            <button type="submit">Simpan</button>
+                        </form>
+                    </div>
+                </div>
+            `;
+            
+            const existingModal = document.getElementById('supplierModal');
+            if (existingModal) existingModal.remove();
+            
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            document.getElementById('supplierForm').onsubmit = async (e) => {
+                e.preventDefault();
+                const id = document.getElementById('supplierId').value;
+                const params = {
+                    operation: id ? 'update' : 'create',
+                    id: id,
+                    nama_supplier: document.getElementById('namaSupplier').value,
+                    kontak: document.getElementById('kontak').value,
+                    alamat: document.getElementById('alamat').value,
+                    email: document.getElementById('email').value,
+                    catatan: document.getElementById('catatan').value
+                };
+                
+                const result = await callApi('supplier', params);
+                if (result.success) {
+                    showToast(result.message);
+                    closeSupplierModal();
+                    loadSupplier();
+                } else {
+                    showToast(result.message, 'error');
+                }
+            };
+        }
+
+        function closeSupplierModal() {
+            const modal = document.getElementById('supplierModal');
+            if (modal) modal.remove();
+        }
+
+        async function editSupplier(id) {
+            const result = await callApi('supplier', { operation: 'read' });
+            if (result.success && result.data) {
+                const supplier = result.data.find(s => s.id === id);
+                if (supplier) {
+                    showSupplierModal(supplier);
+                }
+            }
+        }
+
+        async function deleteSupplier(id) {
+            if (confirm('Yakin ingin menghapus supplier ini?')) {
+                const result = await callApi('supplier', { operation: 'delete', id: id });
+                if (result.success) {
+                    showToast(result.message);
+                    loadSupplier();
+                } else {
+                    showToast(result.message, 'error');
+                }
+            }
+        }
+
+        // ==================== MASTER KONSUMEN ====================
+        async function loadKonsumen() {
+            const result = await callApi('konsumen', { operation: 'read' });
+            const html = `
+                <button onclick="showKonsumenModal()" style="width: auto; margin-bottom: 20px;">+ Tambah Konsumen</button>
+                <div class="data-table">
+                    <table>
+                        <thead>
+                            <tr><th>ID</th><th>Nama</th><th>Email</th><th>Telepon</th><th>Alamat</th><th>Poin</th><th>Aksi</th></tr>
+                        </thead>
+                        <tbody>
+                            ${result.success && result.data ? result.data.map(k => `
+                                <tr>
+                                    <td>${k.id}</td>
+                                    <td>${k.nama}</td>
+                                    <td>${k.email || '-'}</td>
+                                    <td>${k.telepon || '-'}</td>
+                                    <td>${k.alamat || '-'}</td>
+                                    <td>${k.poin || 0}</td>
+                                    <td>
+                                        <button onclick="editKonsumen('${k.id}')" style="width: auto; padding: 5px 10px; margin-right:5px;">Edit</button>
+                                        <button onclick="deleteKonsumen('${k.id}')" class="btn-danger" style="width: auto; padding: 5px 10px;">Hapus</button>
+                                    </td>
+                                </tr>
+                            `).join('') : '<tr><td colspan="7">Tidak ada data</td></tr>'}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            document.getElementById('pageContent').innerHTML = html;
+        }
+
+        function showKonsumenModal(data = null) {
+            const isEdit = data !== null;
+            const modalHtml = `
+                <div id="konsumenModal" class="modal active">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3>${isEdit ? 'Edit Konsumen' : 'Tambah Konsumen'}</h3>
+                            <span class="close-modal" onclick="closeKonsumenModal()">&times;</span>
+                        </div>
+                        <form id="konsumenForm">
+                            <input type="hidden" id="konsumenId" value="${isEdit ? data.id : ''}">
+                            <div class="form-group">
+                                <label>Nama *</label>
+                                <input type="text" id="namaKonsumen" required value="${isEdit ? data.nama : ''}">
+                            </div>
+                            <div class="form-group">
+                                <label>Email</label>
+                                <input type="email" id="emailKonsumen" value="${isEdit ? data.email || '' : ''}">
+                            </div>
+                            <div class="form-group">
+                                <label>Telepon</label>
+                                <input type="text" id="teleponKonsumen" value="${isEdit ? data.telepon || '' : ''}">
+                            </div>
+                            <div class="form-group">
+                                <label>Alamat</label>
+                                <textarea id="alamatKonsumen">${isEdit ? data.alamat || '' : ''}</textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Poin</label>
+                                <input type="number" id="poinKonsumen" value="${isEdit ? data.poin || '0' : '0'}">
+                            </div>
+                            <button type="submit">Simpan</button>
+                        </form>
+                    </div>
+                </div>
+            `;
+            
+            const existingModal = document.getElementById('konsumenModal');
+            if (existingModal) existingModal.remove();
+            
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            document.getElementById('konsumenForm').onsubmit = async (e) => {
+                e.preventDefault();
+                const id = document.getElementById('konsumenId').value;
+                const params = {
+                    operation: id ? 'update' : 'create',
+                    id: id,
+                    nama: document.getElementById('namaKonsumen').value,
+                    email: document.getElementById('emailKonsumen').value,
+                    telepon: document.getElementById('teleponKonsumen').value,
+                    alamat: document.getElementById('alamatKonsumen').value,
+                    poin: document.getElementById('poinKonsumen').value
+                };
+                
+                const result = await callApi('konsumen', params);
+                if (result.success) {
+                    showToast(result.message);
+                    closeKonsumenModal();
+                    loadKonsumen();
+                } else {
+                    showToast(result.message, 'error');
+                }
+            };
+        }
+
+        function closeKonsumenModal() {
+            const modal = document.getElementById('konsumenModal');
+            if (modal) modal.remove();
+        }
+
+        async function editKonsumen(id) {
+            const result = await callApi('konsumen', { operation: 'read' });
+            if (result.success && result.data) {
+                const konsumen = result.data.find(k => k.id === id);
+                if (konsumen) {
+                    showKonsumenModal(konsumen);
+                }
+            }
+        }
+
+        async function deleteKonsumen(id) {
+            if (confirm('Yakin ingin menghapus konsumen ini?')) {
+                const result = await callApi('konsumen', { operation: 'delete', id: id });
+                if (result.success) {
+                    showToast(result.message);
+                    loadKonsumen();
                 } else {
                     showToast(result.message, 'error');
                 }
@@ -2047,7 +1615,6 @@
                             <input type="date" id="laporanSampai">
                         </div>
                         <button onclick="loadLaporanPenjualan()" style="margin-bottom:10px;">📊 Tampilkan Laporan Penjualan</button>
-                        <button onclick="loadLaporanServis()" class="btn-warning">🔧 Tampilkan Laporan Servis</button>
                     </div>
                 </div>
                 <div id="laporanResult"></div>
@@ -2059,15 +1626,15 @@
             const dari = document.getElementById('laporanDari')?.value || '';
             const sampai = document.getElementById('laporanSampai')?.value || '';
             
-            const result = await apiCall('laporan-penjualan', { dari, sampai });
+            const result = await callApi('laporan-penjualan', { dari, sampai });
             
             if (result.success) {
                 const html = `
                     <div class="stat-card" style="margin-top:20px;">
                         <h3>📊 Statistik Penjualan</h3>
-                        <p>Total: Rp ${formatNumber(result.statistik.total)}</p>
-                        <p>Jumlah Transaksi: ${formatNumber(result.statistik.jumlah_transaksi)}</p>
-                        <p>Rata-rata: Rp ${formatNumber(result.statistik.rata_rata)}</p>
+                        <p>Total: Rp ${formatNumber(result.statistik?.total || 0)}</p>
+                        <p>Jumlah Transaksi: ${formatNumber(result.statistik?.jumlah_transaksi || 0)}</p>
+                        <p>Rata-rata: Rp ${formatNumber(result.statistik?.rata_rata || 0)}</p>
                     </div>
                     <div class="data-table" style="margin-top:20px;">
                         <table>
@@ -2075,54 +1642,18 @@
                                 <tr><th>ID Transaksi</th><th>Tanggal</th><th>Konsumen</th><th>Grand Total</th><th>Metode</th></tr>
                             </thead>
                             <tbody>
-                                ${result.data.map(t => `
-                                    <tr>
-                                        <td>${t.id_transaksi}</td>
-                                        <td>${new Date(t.tanggal).toLocaleDateString('id-ID')}</td>
-                                        <td>${t.id_konsumen || 'Umum'}</td>
-                                        <td>Rp ${formatNumber(t.grand_total)}</td>
-                                        <td>${t.metode_pembayaran}</td>
-                                    </tr>
-                                `).join('')}
-                                ${result.data.length === 0 ? '<tr><td colspan="5">Tidak ada data</td></tr>' : ''}
-                            </tbody>
-                        </table>
-                    </div>
-                `;
-                document.getElementById('laporanResult').innerHTML = html;
-            } else {
-                showToast(result.message, 'error');
-            }
-        }
-
-        async function loadLaporanServis() {
-            const dari = document.getElementById('laporanDari')?.value || '';
-            const sampai = document.getElementById('laporanSampai')?.value || '';
-            
-            const result = await apiCall('laporan-servis', { dari, sampai });
-            
-            if (result.success) {
-                const html = `
-                    <div class="stat-card" style="margin-top:20px;">
-                        <h3>🔧 Statistik Servis</h3>
-                        <p>Total Servis: ${formatNumber(result.statistik.total_servis)}</p>
-                        <p>Total Pendapatan: Rp ${formatNumber(result.statistik.total_pendapatan)}</p>
-                    </div>
-                    <div class="data-table" style="margin-top:20px;">
-                        <table>
-                            <thead>
-                                <tr><th>Tanggal</th><th>Nama Servis</th><th>Qty</th><th>Subtotal</th></tr>
-                            </thead>
-                            <tbody>
-                                ${result.data.map(s => `
-                                    <tr>
-                                        <td>${s.tanggal ? new Date(s.tanggal).toLocaleDateString('id-ID') : '-'}</td>
-                                        <td>${s.nama_barang}</td>
-                                        <td>${s.qty}</td>
-                                        <td>Rp ${formatNumber(s.subtotal)}</td>
-                                    </tr>
-                                `).join('')}
-                                ${result.data.length === 0 ? '<tr><td colspan="4">Tidak ada data</td></tr>' : ''}
+                                ${result.data && result.data.length > 0 ? 
+                                    result.data.map(t => `
+                                        <tr>
+                                            <td>${t.id_transaksi}</td>
+                                            <td>${t.tgl_transaksi ? t.tgl_transaksi.split(' ')[0] : '-'}</td>
+                                            <td>${t.id_konsumen || 'Umum'}</td>
+                                            <td>Rp ${formatNumber(t.grand_total)}</td>
+                                            <td>${t.metode_pembayaran}</td>
+                                        </tr>
+                                    `).join('') : 
+                                    '<tr><td colspan="5">Tidak ada data</td></tr>'
+                                }
                             </tbody>
                         </table>
                     </div>
@@ -2190,23 +1721,17 @@
                 
                 for (let i = 0; i < fields.length; i++) {
                     const value = document.getElementById(ids[i])?.value || '';
-                    await apiCall('konfigurasi', { operation: 'update', key: fields[i], value: value }, 'POST');
+                    await callApi('konfigurasi', { operation: 'update', key: fields[i], value: value });
                 }
                 
                 showToast('Pengaturan berhasil disimpan');
+                updateLoginDisplay();
             };
-        }
-
-        // ==================== UTILITY ====================
-        function formatNumber(num) {
-            if (num === undefined || num === null) return '0';
-            return Number(num).toLocaleString('id-ID');
         }
 
         // ==================== INITIALIZATION ====================
         document.getElementById('loginForm').addEventListener('submit', handleLogin);
         
-        // Setup sidebar menu
         document.querySelectorAll('.sidebar-menu li').forEach(li => {
             li.addEventListener('click', () => {
                 const page = li.dataset.page;
@@ -2218,7 +1743,6 @@
             });
         });
         
-        // Check session on load
         checkSession();
     </script>
 </body>

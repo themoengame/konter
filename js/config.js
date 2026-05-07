@@ -15,6 +15,7 @@ const ROLE_MENU = {
         { id: 'pulsa', icon: '📡', label: 'Master Pulsa', page: 'master-pulsa' },
         { id: 'pembayaran', icon: '💳', label: 'Master Pembayaran', page: 'master-pembayaran' },
         { id: 'servis', icon: '🔧', label: 'Master Servis', page: 'master-servis' },
+        { id: 'profil-toko', icon: '🏪', label: 'Profil Toko', page: 'profil-toko' },
         { id: 'laporan-penjualan', icon: '📈', label: 'Laporan Penjualan', page: 'laporan-penjualan' },
         { id: 'laporan-servis', icon: '🛠️', label: 'Laporan Servis', page: 'laporan-servis' }
     ],
@@ -34,6 +35,7 @@ const ROLE_MENU = {
         { id: 'pulsa', icon: '📡', label: 'Master Pulsa', page: 'master-pulsa' },
         { id: 'pembayaran', icon: '💳', label: 'Master Pembayaran', page: 'master-pembayaran' },
         { id: 'servis', icon: '🔧', label: 'Master Servis', page: 'master-servis' },
+        { id: 'profil-toko', icon: '🏪', label: 'Profil Toko', page: 'profil-toko' },
         { id: 'laporan-penjualan', icon: '📈', label: 'Laporan Penjualan', page: 'laporan-penjualan' },
         { id: 'laporan-servis', icon: '🛠️', label: 'Laporan Servis', page: 'laporan-servis' }
     ]

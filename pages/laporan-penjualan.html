@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Laporan Penjualan</title>
+</head>
+<body>
+    <div class="laporan-container">
+        <div class="section-header">
+            <h3>📈 Laporan Penjualan</h3>
+            <div class="filter-bar">
+                <input type="date" id="tglDari" value="">
+                <span>s/d</span>
+                <input type="date" id="tglSampai" value="">
+                <button class="btn-primary" onclick="loadLaporanPenjualanPage()">Tampilkan</button>
+                <button class="btn-secondary" onclick="exportLaporanPenjualanPage()">📥 Export CSV</button>
+                <button class="btn-secondary" onclick="printLaporan()">🖨️ Print</button>
+            </div>
+        </div>
+        
+        <div class="dashboard-grid" style="margin-bottom:20px;">
+            <div class="stat-card">
+                <h3>💰 Total Penjualan</h3>
+                <p class="stat-value" id="totalPenjualan">Rp 0</p>
+            </div>
+            <div class="stat-card">
+                <h3>📊 Jumlah Transaksi</h3>
+                <p class="stat-value" id="jumlahTransaksi">0</p>
+            </div>
+            <div class="stat-card">
+                <h3>⭐ Rata-rata Transaksi</h3>
+                <p class="stat-value" id="rataTransaksi">Rp 0</p>
+            </div>
+        </div>
+        
+        <div class="table-container">
+            <table class="data-table" id="laporanTable">
+                <thead>
+                    <tr>
+                        <th>ID Transaksi</th>
+                        <th>Tanggal</th>
+                        <th>Konsumen</th>
+                        <th>Total Bayar</th>
+                        <th>Diskon</th>
+                        <th>Grand Total</th>
+                        <th>Metode</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="laporanPenjualanBody">
+                    <tr><td colspan="8" style="text-align:center">Pilih tanggal dan klik Tampilkan</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let laporanData = [];
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set default tanggal (7 hari terakhir)
+            const today = getTodayDate();
+            const lastWeek = new Date();
+            lastWeek.setDate(lastWeek.getDate() - 7);
+            const lastWeekStr = lastWeek.toISOString().slice(0, 10);
+            
+            document.getElementById('tglDari').value = lastWeekStr;
+            document.getElementById('tglSampai').value = today;
+            
+            loadLaporanPenjualanPage();
+        });
+        
+        async function loadLaporanPenjualanPage() {
+            const tglDari = document.getElementById('tglDari')?.value;
+            const tglSampai = document.getElementById('tglSampai')?.value;
+            
+            if (!tglDari || !tglSampai) {
+                showToast('Pilih rentang tanggal', 'warning');
+                return;
+            }
+            
+            showLoading(true);
+            
+            try {
+                const data = await getLaporanPenjualan(tglDari, tglSampai);
+                laporanData = data;
+                
+                const tbody = document.getElementById('laporanPenjualanBody');
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center">Tidak ada data penjualan</td></tr>';
+                    document.getElementById('totalPenjualan').textContent = formatRupiah(0);
+                    document.getElementById('jumlahTransaksi').textContent = '0';
+                    document.getElementById('rataTransaksi').textContent = formatRupiah(0);
+                    return;
+                }
+                
+                let totalGrand = 0;
+                
+                tbody.innerHTML = data.map(item => {
+                    totalGrand += item.grand_total || 0;
+                    return `
+                        <tr>
+                            <td>${item.id_transaksi || '-'}</td>
+                            <td>${formatTanggal(item.tgl)}</td>
+                            <td>${item.id_konsumen || '-'}</td>
+                            <td>${formatRupiah(item.total_bayar || 0)}</td>
+                            <td>${formatRupiah(item.diskon || 0)}</td>
+                            <td><strong>${formatRupiah(item.grand_total || 0)}</strong></td>
+                            <td>${item.metode || '-'}</td>
+                            <td>${item.status || 'Selesai'}</td>
+                        </tr>
+                    `;
+                }).join('');
+                
+                document.getElementById('totalPenjualan').textContent = formatRupiah(totalGrand);
+                document.getElementById('jumlahTransaksi').textContent = data.length;
+                document.getElementById('rataTransaksi').textContent = formatRupiah(totalGrand / data.length);
+                
+            } catch (error) {
+                console.error('Error loading laporan:', error);
+                showToast('Gagal memuat laporan', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        function exportLaporanPenjualanPage() {
+            if (laporanData.length === 0) {
+                showToast('Tidak ada data untuk diekspor', 'warning');
+                return;
+            }
+            
+            exportToCSV(laporanData, 'laporan_penjualan');
+        }
+        
+        function printLaporan() {
+            const printContent = document.querySelector('.table-container').innerHTML;
+            const header = document.querySelector('.section-header h3').innerHTML;
+            const stats = document.querySelector('.dashboard-grid').innerHTML;
+            const tglDari = document.getElementById('tglDari').value;
+            const tglSampai = document.getElementById('tglSampai').value;
+            
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>Laporan Penjualan</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; padding: 20px; }
+                        h2 { text-align: center; }
+                        .stats { display: flex; gap: 20px; margin: 20px 0; }
+                        .stat-card { border: 1px solid #ddd; padding: 10px; border-radius: 5px; text-align: center; flex: 1; }
+                        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                        th { background: #f5f5f5; }
+                        .footer { margin-top: 30px; text-align: right; }
+                    </style>
+                </head>
+                <body>
+                    <h2>Laporan Penjualan</h2>
+                    <p>Periode: ${tglDari} s/d ${tglSampai}</p>
+                    <div class="stats">${stats}</div>
+                    ${printContent}
+                    <div class="footer">
+                        <p>Dicetak pada: ${new Date().toLocaleString()}</p>
+                    </div>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.print();
+        }
+        
+        window.loadLaporanPenjualanPage = loadLaporanPenjualanPage;
+        window.exportLaporanPenjualanPage = exportLaporanPenjualanPage;
+        window.printLaporan = printLaporan;
+    </script>
+</body>
+</html>

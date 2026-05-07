@@ -66,7 +66,7 @@ async function handleLogin(e) {
                 isLoggedIn: true,
                 email: result.email,
                 role: result.role,
-                nama: result.nama
+                nama: result.nama || result.email
             };
             localStorage.setItem('user', JSON.stringify(currentUser));
             
@@ -128,3 +128,7 @@ function hasPermission(menuId) {
     
     return menus.some(menu => menu.id === menuId);
 }
+
+// Export ke global
+window.getCurrentRole = getCurrentRole;
+window.logout = logout;

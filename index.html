@@ -1,0 +1,2203 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Counter HP Management System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #4361ee;
+            --secondary: #7209b7;
+            --success: #06d6a0;
+            --warning: #ff9f1c;
+            --danger: #ef476f;
+            --dark: #2b2d42;
+            --gray: #8d99ae;
+            --light: #edf2f4;
+            --white: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--light);
+            min-height: 100vh;
+        }
+
+        /* Login Page */
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+        }
+
+        .login-card {
+            background: var(--white);
+            border-radius: 20px;
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+
+        .logo-toko {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .nama-toko {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--dark);
+            margin-bottom: 5px;
+        }
+
+        .alamat-toko {
+            font-size: 12px;
+            color: var(--gray);
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--dark);
+            font-weight: 500;
+        }
+
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--gray);
+            border-radius: 10px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(67,97,238,0.2);
+        }
+
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            width: 100%;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: var(--secondary);
+            transform: translateY(-2px);
+        }
+
+        button:disabled {
+            background: var(--gray);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-success {
+            background: var(--success);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+        }
+
+        .btn-warning {
+            background: var(--warning);
+        }
+
+        /* Main App Layout */
+        .app-container {
+            display: none;
+        }
+
+        .app-container.active {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            background: var(--dark);
+            color: white;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            transition: all 0.3s;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .sidebar-header h3 {
+            font-size: 18px;
+        }
+
+        .sidebar-header p {
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 20px 0;
+        }
+
+        .sidebar-menu li {
+            padding: 12px 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .sidebar-menu li:hover, .sidebar-menu li.active {
+            background: rgba(67,97,238,0.3);
+            border-left: 4px solid var(--primary);
+        }
+
+        .sidebar-menu li span:first-child {
+            font-size: 20px;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 260px;
+            padding: 20px;
+        }
+
+        .top-bar {
+            background: var(--white);
+            padding: 15px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--dark);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .btn-logout {
+            background: var(--danger);
+            padding: 8px 16px;
+            width: auto;
+        }
+
+        /* Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: var(--white);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .stat-card h3 {
+            font-size: 14px;
+            color: var(--gray);
+            margin-bottom: 10px;
+        }
+
+        .stat-card .value {
+            font-size: 28px;
+            font-weight: bold;
+            color: var(--dark);
+        }
+
+        /* Tables */
+        .data-table {
+            width: 100%;
+            background: var(--white);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .data-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th, .data-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--light);
+        }
+
+        .data-table th {
+            background: var(--primary);
+            color: white;
+            font-weight: 600;
+        }
+
+        .data-table tr:hover {
+            background: var(--light);
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--white);
+            border-radius: 20px;
+            padding: 30px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .close-modal {
+            cursor: pointer;
+            font-size: 24px;
+            color: var(--gray);
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--dark);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            z-index: 2000;
+            animation: slideIn 0.3s ease;
+        }
+
+        .toast.success { background: var(--success); }
+        .toast.error { background: var(--danger); }
+        .toast.warning { background: var(--warning); }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Cart Styles */
+        .cart-container {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .cart-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid var(--light);
+        }
+
+        .cart-item-qty {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .cart-item-qty button {
+            width: 30px;
+            height: 30px;
+            padding: 0;
+            font-size: 18px;
+        }
+
+        /* Product search */
+        .product-search {
+            margin-bottom: 20px;
+        }
+
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .product-card {
+            background: var(--white);
+            border: 1px solid var(--light);
+            border-radius: 12px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+        .product-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border-color: var(--primary);
+        }
+
+        .product-card .price {
+            color: var(--primary);
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        /* Filter tabs */
+        .filter-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-tab {
+            background: var(--light);
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .filter-tab.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 70px;
+            }
+            .sidebar-header h3, .sidebar-header p, .sidebar-menu li span:last-child {
+                display: none;
+            }
+            .main-content {
+                margin-left: 70px;
+            }
+            .sidebar-menu li {
+                justify-content: center;
+            }
+            .sidebar-menu li span:first-child {
+                font-size: 24px;
+            }
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Page -->
+    <div id="loginPage" class="login-container">
+        <div class="login-card">
+            <div class="logo-toko">📱</div>
+            <div class="nama-toko" id="loginNamaToko">Counter HP Management</div>
+            <div class="alamat-toko" id="loginAlamatToko">Loading...</div>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="loginEmail" required placeholder="admin@counter.com">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="loginPassword" required placeholder="••••••">
+                </div>
+                <button type="submit">LOGIN</button>
+            </form>
+            <div style="margin-top: 20px; font-size: 12px; color: var(--gray);">
+                Demo: admin@counter.com / admin123
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="appContainer" class="app-container">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h3>📱 Counter HP</h3>
+                <p id="sidebarRole"></p>
+            </div>
+            <ul class="sidebar-menu">
+                <li data-page="dashboard">
+                    <span>📊</span>
+                    <span>Dashboard</span>
+                </li>
+                <li data-page="penjualan">
+                    <span>💰</span>
+                    <span>Penjualan</span>
+                </li>
+                <li data-page="pembelian">
+                    <span>📦</span>
+                    <span>Pembelian</span>
+                </li>
+                <li data-page="barang">
+                    <span>📱</span>
+                    <span>Barang</span>
+                </li>
+                <li data-page="supplier">
+                    <span>🏭</span>
+                    <span>Supplier</span>
+                </li>
+                <li data-page="konsumen">
+                    <span>👥</span>
+                    <span>Konsumen</span>
+                </li>
+                <li data-page="pulsa">
+                    <span>📞</span>
+                    <span>Pulsa</span>
+                </li>
+                <li data-page="pembayaran">
+                    <span>💳</span>
+                    <span>Pembayaran Online</span>
+                </li>
+                <li data-page="servis">
+                    <span>🔧</span>
+                    <span>Servis</span>
+                </li>
+                <li data-page="laporan">
+                    <span>📄</span>
+                    <span>Laporan</span>
+                </li>
+                <li data-page="profil">
+                    <span>🏪</span>
+                    <span>Profil Toko</span>
+                </li>
+                <li data-page="logout">
+                    <span>🚪</span>
+                    <span>Logout</span>
+                </li>
+            </ul>
+        </div>
+
+        <div class="main-content">
+            <div class="top-bar">
+                <div class="page-title" id="pageTitle">Dashboard</div>
+                <div class="user-info">
+                    <span id="userName"></span>
+                    <button class="btn-logout" onclick="logout()">Logout</button>
+                </div>
+            </div>
+            <div id="pageContent"></div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== GLOBAL VARIABLES ====================
+        let currentUser = null;
+        let currentPage = 'dashboard';
+        let cart = [];
+        
+        // Base URL - Update this with your Apps Script URL
+        const BASE_URL = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec';
+
+        // ==================== HELPER FUNCTIONS ====================
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        async function apiCall(action, params = {}, method = 'GET') {
+            const url = new URL(BASE_URL);
+            url.searchParams.append('action', action);
+            url.searchParams.append('method', method);
+            
+            for (const [key, value] of Object.entries(params)) {
+                if (value !== undefined && value !== null && value !== '') {
+                    url.searchParams.append(key, value);
+                }
+            }
+            
+            try {
+                const response = await fetch(url.toString());
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('API Error:', error);
+                showToast('Koneksi error: ' + error.message, 'error');
+                return { success: false, message: error.message };
+            }
+        }
+
+        async function loadConfig() {
+            const result = await apiCall('konfigurasi', { operation: 'read' });
+            if (result.success) {
+                return result.data;
+            }
+            return {};
+        }
+
+        async function updateLoginDisplay() {
+            const config = await loadConfig();
+            document.getElementById('loginNamaToko').textContent = config.nama_toko || 'Counter HP Management';
+            document.getElementById('loginAlamatToko').textContent = config.alamat || 'Jl. Raya No. 123, Jakarta';
+        }
+
+        // ==================== AUTHENTICATION ====================
+        async function handleLogin(event) {
+            event.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            if (!email || !password) {
+                showToast('Email dan password harus diisi', 'error');
+                return;
+            }
+            
+            const result = await apiCall('login', { email, password });
+            
+            if (result.success) {
+                currentUser = {
+                    email: result.email,
+                    role: result.role,
+                    nama: result.nama
+                };
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                document.getElementById('loginPage').style.display = 'none';
+                document.getElementById('appContainer').classList.add('active');
+                document.getElementById('sidebarRole').textContent = result.role.toUpperCase();
+                document.getElementById('userName').textContent = result.nama;
+                loadPage('dashboard');
+                showToast('Login berhasil! Selamat datang ' + result.nama);
+            } else {
+                showToast(result.message, 'error');
+            }
+        }
+
+        function checkSession() {
+            const savedUser = localStorage.getItem('currentUser');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                document.getElementById('loginPage').style.display = 'none';
+                document.getElementById('appContainer').classList.add('active');
+                document.getElementById('sidebarRole').textContent = currentUser.role.toUpperCase();
+                document.getElementById('userName').textContent = currentUser.nama;
+                loadPage('dashboard');
+            } else {
+                updateLoginDisplay();
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('currentUser');
+            currentUser = null;
+            document.getElementById('loginPage').style.display = 'flex';
+            document.getElementById('appContainer').classList.remove('active');
+            updateLoginDisplay();
+            showToast('Anda telah logout');
+        }
+
+        // ==================== PAGE LOADER ====================
+        function loadPage(page) {
+            currentPage = page;
+            document.getElementById('pageTitle').textContent = getPageTitle(page);
+            
+            // Update active menu
+            document.querySelectorAll('.sidebar-menu li').forEach(li => {
+                li.classList.remove('active');
+                if (li.dataset.page === page) {
+                    li.classList.add('active');
+                }
+            });
+            
+            // Load page content
+            switch(page) {
+                case 'dashboard':
+                    loadDashboard();
+                    break;
+                case 'penjualan':
+                    loadPenjualan();
+                    break;
+                case 'pembelian':
+                    loadPembelian();
+                    break;
+                case 'barang':
+                    loadBarang();
+                    break;
+                case 'supplier':
+                    loadSupplier();
+                    break;
+                case 'konsumen':
+                    loadKonsumen();
+                    break;
+                case 'pulsa':
+                    loadPulsa();
+                    break;
+                case 'pembayaran':
+                    loadPembayaran();
+                    break;
+                case 'servis':
+                    loadServis();
+                    break;
+                case 'laporan':
+                    loadLaporan();
+                    break;
+                case 'profil':
+                    loadProfil();
+                    break;
+                default:
+                    loadDashboard();
+            }
+        }
+
+        function getPageTitle(page) {
+            const titles = {
+                dashboard: '📊 Dashboard',
+                penjualan: '💰 Transaksi Penjualan',
+                pembelian: '📦 Transaksi Pembelian',
+                barang: '📱 Master Barang',
+                supplier: '🏭 Master Supplier',
+                konsumen: '👥 Master Konsumen',
+                pulsa: '📞 Master Pulsa',
+                pembayaran: '💳 Master Pembayaran Online',
+                servis: '🔧 Master Servis',
+                laporan: '📄 Laporan',
+                profil: '🏪 Profil Toko'
+            };
+            return titles[page] || 'Dashboard';
+        }
+
+        // ==================== DASHBOARD ====================
+        async function loadDashboard() {
+            const result = await apiCall('dashboard-stats');
+            if (result.success) {
+                const data = result.data;
+                const html = `
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h3>💰 Penjualan Hari Ini</h3>
+                            <div class="value">Rp ${formatNumber(data.penjualan_hari_ini)}</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>📦 Total Stok Barang</h3>
+                            <div class="value">${formatNumber(data.total_stok)}</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>👥 Total Konsumen</h3>
+                            <div class="value">${formatNumber(data.total_konsumen)}</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>🏭 Total Supplier</h3>
+                            <div class="value">${formatNumber(data.total_supplier)}</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>📈 Penjualan Bulan Ini</h3>
+                            <div class="value">Rp ${formatNumber(data.penjualan_bulan_ini)}</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>🔄 Transaksi Hari Ini</h3>
+                            <div class="value">${formatNumber(data.jumlah_transaksi_hari_ini)}</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>🏆 Top 5 Konsumen (Poin Tertinggi)</h3>
+                        <table style="width:100%; margin-top:10px;">
+                            <tr><th>Nama</th><th>Poin</th></tr>
+                            ${data.top_konsumen.map(k => `<tr><td>${k.nama}</td><td>${formatNumber(k.poin)}</td></tr>`).join('')}
+                        </table>
+                    </div>
+                `;
+                document.getElementById('pageContent').innerHTML = html;
+            } else {
+                document.getElementById('pageContent').innerHTML = '<p>Gagal memuat dashboard</p>';
+            }
+        }
+
+        // ==================== PENJUALAN ====================
+        let currentFilter = 'all';
+        let products = [];
+        let konsumenList = [];
+
+        async function loadPenjualan() {
+            // Load products and customers
+            const barangResult = await apiCall('barang', { operation: 'read' });
+            const pulsaResult = await apiCall('pulsa', { operation: 'read' });
+            const pembayaranResult = await apiCall('pembayaran', { operation: 'read' });
+            const servisResult = await apiCall('servis', { operation: 'read' });
+            const konsumenResult = await apiCall('konsumen', { operation: 'read' });
+            
+            products = [];
+            
+            if (barangResult.success) {
+                barangResult.data.forEach(b => {
+                    products.push({ ...b, tipe: 'barang' });
+                });
+            }
+            if (pulsaResult.success) {
+                pulsaResult.data.forEach(p => {
+                    products.push({ ...p, tipe: 'pulsa', nama_barang: `${p.operator} ${p.nominal}`, harga_jual: p.harga_jual });
+                });
+            }
+            if (pembayaranResult.success) {
+                pembayaranResult.data.forEach(p => {
+                    products.push({ ...p, tipe: 'pembayaran', nama_barang: `${p.provider} - ${p.jenis_layanan}`, harga_jual: p.fee_jual });
+                });
+            }
+            if (servisResult.success) {
+                servisResult.data.forEach(s => {
+                    products.push({ ...s, tipe: 'servis', nama_barang: s.nama_servis, harga_jual: s.biaya_jasa });
+                });
+            }
+            
+            konsumenList = konsumenResult.success ? konsumenResult.data : [];
+            
+            renderPenjualan();
+        }
+
+        function renderPenjualan() {
+            const filteredProducts = currentFilter === 'all' ? products : products.filter(p => p.tipe === currentFilter);
+            
+            const html = `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div>
+                        <h3>🛒 Pilih Produk</h3>
+                        <div class="filter-tabs">
+                            <div class="filter-tab ${currentFilter === 'all' ? 'active' : ''}" onclick="setFilter('all')">Semua</div>
+                            <div class="filter-tab ${currentFilter === 'barang' ? 'active' : ''}" onclick="setFilter('barang')">Barang</div>
+                            <div class="filter-tab ${currentFilter === 'pulsa' ? 'active' : ''}" onclick="setFilter('pulsa')">Pulsa</div>
+                            <div class="filter-tab ${currentFilter === 'pembayaran' ? 'active' : ''}" onclick="setFilter('pembayaran')">Pembayaran</div>
+                            <div class="filter-tab ${currentFilter === 'servis' ? 'active' : ''}" onclick="setFilter('servis')">Servis</div>
+                        </div>
+                        <input type="text" class="product-search" placeholder="Cari produk..." id="searchProduct" onkeyup="searchProducts()">
+                        <div class="product-grid" id="productGrid">
+                            ${filteredProducts.map(p => `
+                                <div class="product-card" onclick="addToCart('${p.id}', '${p.nama_barang}', ${p.harga_jual}, '${p.tipe}')">
+                                    <div>${p.nama_barang}</div>
+                                    <div class="price">Rp ${formatNumber(p.harga_jual)}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <div>
+                        <h3>🛍️ Keranjang Belanja</h3>
+                        <div class="form-group">
+                            <label>Cari Konsumen</label>
+                            <input type="text" id="searchKonsumen" placeholder="Cari nama/email/telepon" onkeyup="searchKonsumen()">
+                            <select id="pilihKonsumen" style="margin-top: 10px;">
+                                <option value="">Tanpa Konsumen</option>
+                                ${konsumenList.map(k => `<option value="${k.id}">${k.nama} (Poin: ${k.poin})</option>`).join('')}
+                            </select>
+                        </div>
+                        <div id="cartItems"></div>
+                        <div class="form-group">
+                            <label>Diskon (Rp)</label>
+                            <input type="number" id="diskon" value="0" onchange="updateGrandTotal()">
+                        </div>
+                        <div class="form-group">
+                            <label>Grand Total</label>
+                            <input type="text" id="grandTotal" readonly style="background:#f0f0f0; font-size:20px; font-weight:bold;">
+                        </div>
+                        <div class="form-group">
+                            <label>Metode Pembayaran</label>
+                            <select id="metodeBayar">
+                                <option value="cash">Cash</option>
+                                <option value="qris">QRIS</option>
+                                <option value="transfer">Transfer</option>
+                            </select>
+                        </div>
+                        <button onclick="prosesPembayaran()" class="btn-success">💳 Proses Pembayaran</button>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('pageContent').innerHTML = html;
+            updateCartDisplay();
+        }
+
+        function setFilter(filter) {
+            currentFilter = filter;
+            renderPenjualan();
+        }
+
+        function searchProducts() {
+            const searchTerm = document.getElementById('searchProduct')?.value.toLowerCase() || '';
+            const filtered = currentFilter === 'all' ? products : products.filter(p => p.tipe === currentFilter);
+            const searchFiltered = filtered.filter(p => p.nama_barang.toLowerCase().includes(searchTerm));
+            
+            const grid = document.getElementById('productGrid');
+            if (grid) {
+                grid.innerHTML = searchFiltered.map(p => `
+                    <div class="product-card" onclick="addToCart('${p.id}', '${p.nama_barang}', ${p.harga_jual}, '${p.tipe}')">
+                        <div>${p.nama_barang}</div>
+                        <div class="price">Rp ${formatNumber(p.harga_jual)}</div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function addToCart(id, name, price, tipe) {
+            const existing = cart.find(item => item.id_barang === id);
+            if (existing) {
+                existing.qty++;
+                existing.subtotal = existing.qty * existing.harga_jual;
+            } else {
+                cart.push({
+                    id_barang: id,
+                    nama_barang: name,
+                    harga_jual: price,
+                    qty: 1,
+                    subtotal: price,
+                    tipe: tipe
+                });
+            }
+            updateCartDisplay();
+            showToast(`${name} ditambahkan ke keranjang`);
+        }
+
+        function updateCartDisplay() {
+            const container = document.getElementById('cartItems');
+            if (!container) return;
+            
+            if (cart.length === 0) {
+                container.innerHTML = '<p>Keranjang kosong</p>';
+                updateGrandTotal();
+                return;
+            }
+            
+            container.innerHTML = `
+                ${cart.map((item, index) => `
+                    <div class="cart-item">
+                        <div>
+                            <strong>${item.nama_barang}</strong><br>
+                            Rp ${formatNumber(item.harga_jual)}
+                        </div>
+                        <div class="cart-item-qty">
+                            <button onclick="updateQty(${index}, -1)">-</button>
+                            <span>${item.qty}</span>
+                            <button onclick="updateQty(${index}, 1)">+</button>
+                            <button class="btn-danger" style="width:auto; padding:5px 10px;" onclick="removeFromCart(${index})">Hapus</button>
+                        </div>
+                        <div>Rp ${formatNumber(item.subtotal)}</div>
+                    </div>
+                `).join('')}
+            `;
+            updateGrandTotal();
+        }
+
+        function updateQty(index, change) {
+            const newQty = cart[index].qty + change;
+            if (newQty <= 0) {
+                cart.splice(index, 1);
+            } else {
+                cart[index].qty = newQty;
+                cart[index].subtotal = cart[index].qty * cart[index].harga_jual;
+            }
+            updateCartDisplay();
+        }
+
+        function removeFromCart(index) {
+            cart.splice(index, 1);
+            updateCartDisplay();
+        }
+
+        function updateGrandTotal() {
+            const subtotal = cart.reduce((sum, item) => sum + item.subtotal, 0);
+            const diskon = parseInt(document.getElementById('diskon')?.value) || 0;
+            const grandTotal = subtotal - diskon;
+            const grandTotalField = document.getElementById('grandTotal');
+            if (grandTotalField) {
+                grandTotalField.value = `Rp ${formatNumber(grandTotal)}`;
+            }
+            return grandTotal;
+        }
+
+        function searchKonsumen() {
+            const searchTerm = document.getElementById('searchKonsumen')?.value.toLowerCase() || '';
+            const filtered = konsumenList.filter(k => 
+                k.nama.toLowerCase().includes(searchTerm) || 
+                (k.email && k.email.toLowerCase().includes(searchTerm)) ||
+                (k.telepon && k.telepon.includes(searchTerm))
+            );
+            const select = document.getElementById('pilihKonsumen');
+            if (select) {
+                select.innerHTML = '<option value="">Tanpa Konsumen</option>' + 
+                    filtered.map(k => `<option value="${k.id}">${k.nama} (${k.telepon || '-'}) - Poin: ${k.poin}</option>`).join('');
+            }
+        }
+
+        async function prosesPembayaran() {
+            if (cart.length === 0) {
+                showToast('Keranjang belanja kosong', 'error');
+                return;
+            }
+            
+            const grandTotal = updateGrandTotal();
+            const diskon = parseInt(document.getElementById('diskon')?.value) || 0;
+            const metodeBayar = document.getElementById('metodeBayar')?.value || 'cash';
+            const idKonsumen = document.getElementById('pilihKonsumen')?.value || '';
+            
+            // Show payment modal
+            const jumlahBayar = prompt(`Total Pembayaran: Rp ${formatNumber(grandTotal)}\nMasukkan jumlah bayar:`);
+            if (!jumlahBayar) return;
+            
+            if (parseInt(jumlahBayar) < grandTotal) {
+                showToast('Jumlah bayar kurang!', 'error');
+                return;
+            }
+            
+            const kembalian = parseInt(jumlahBayar) - grandTotal;
+            
+            const result = await apiCall('transaksi-penjualan', {
+                operation: 'create',
+                id_konsumen: idKonsumen,
+                total_bayar: jumlahBayar,
+                diskon: diskon,
+                grand_total: grandTotal,
+                metode_pembayaran: metodeBayar,
+                dibuat_oleh: currentUser.email,
+                items: JSON.stringify(cart)
+            }, 'POST');
+            
+            if (result.success) {
+                showToast(`Transaksi berhasil! Kembalian: Rp ${formatNumber(kembalian)}`, 'success');
+                cart = [];
+                loadPenjualan();
+            } else {
+                showToast(result.message, 'error');
+            }
+        }
+
+        // ==================== MASTER BARANG ====================
+        async function loadBarang() {
+            const result = await apiCall('barang', { operation: 'read' });
+            const supplierResult = await apiCall('supplier', { operation: 'read' });
+            const suppliers = supplierResult.success ? supplierResult.data : [];
+            
+            const html = `
+                <button onclick="showBarangModal()" style="width: auto; margin-bottom: 20px;">+ Tambah Barang</button>
+                <div class="data-table">
+                    <table>
+                        <thead>
+                            <tr><th>Kode</th><th>Nama</th><th>Kategori</th><th>Harga Beli</th><th>Harga Jual</th><th>Stok</th><th>Aksi</th></tr>
+                        </thead>
+                        <tbody>
+                            ${result.success ? result.data.map(b => `
+                                <tr>
+                                    <td>${b.kode_barang || '-'}</td>
+                                    <td>${b.nama_barang}</td>
+                                    <td>${b.kategori}</td>
+                                    <td>Rp ${formatNumber(b.harga_beli)}</td>
+                                    <td>Rp ${formatNumber(b.harga_jual)}</td>
+                                    <td>${b.stok}</td>
+                                    <td>
+                                        <button onclick="editBarang('${b.id}')" style="width: auto; padding: 5px 10px; margin-right:5px;">Edit</button>
+                                        <button onclick="deleteBarang('${b.id}')" class="btn-danger" style="width: auto; padding: 5px 10px;">Hapus</button>
+                                    </td>
+                                </tr>
+                            `).join('') : '<tr><td colspan="7">Tidak ada data</td></tr>'}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            document.getElementById('pageContent').innerHTML = html;
+            window.barangSuppliers = suppliers;
+        }
+
+        function showBarangModal(data = null) {
+            const isEdit = data !== null;
+            const modalHtml = `
+                <div id="barangModal" class="modal active">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3>${isEdit ? 'Edit Barang' : 'Tambah Barang'}</h3>
+                            <span class="close-modal" onclick="closeBarangModal()">&times;</span>
+                        </div>
+                        <form id="barangForm">
+                            <input type="hidden" id="barangId" value="${isEdit ? data.id : ''}">
+                            <div class="form-group">
+                                <label>Kode Barang</label>
+                                <input type="text" id="kodeBarang" value="${isEdit ? data.kode_barang || '' : ''}">
+                            </div>
+                            <div class="form-group">
+                                <label>Nama Barang *</label>
+                                <input type="text" id="namaBarang" required value="${isEdit ? data.nama_barang : ''}">
+                            </div>
+                            <div class="form-group">
+                                <label>Kategori</label>
+                                <input type="text" id="kategori" value="${isEdit ? data.kategori : ''}">
+                            </div>
+                            <div class="form-group">
+                                <label>Harga Beli</label>
+                                <input type="number" id="hargaBeli" value="${isEdit ? data.harga_beli : '0'}">
+                            </div>
+                            <div class="form-group">
+                                <label>Harga Jual</label>
+                                <input type="number" id="hargaJual" value="${isEdit ? data.harga_jual : '0'}">
+                            </div>
+                            <div class="form-group">
+                                <label>Stok</label>
+                                <input type="number" id="stok" value="${isEdit ? data.stok : '0'}">
+                            </div>
+                            <div class="form-group">
+                                <label>Supplier</label>
+                                <select id="idSupplier">
+                                    <option value="">Pilih Supplier</option>
+                                    ${window.barangSuppliers ? window.barangSuppliers.map(s => `<option value="${s.id}" ${isEdit && data.id_supplier === s.id ? 'selected' : ''}>${s.nama_supplier}</option>`).join('') : ''}
+                                </select>
+                            </div>
+                            <button type="submit">Simpan</button>
+                        </form>
+                    </div>
+                </div>
+            `;
+            
+            // Remove existing modal if any
+            const existingModal = document.getElementById('barangModal');
+            if (existingModal) existingModal.remove();
+            
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            document.getElementById('barangForm').onsubmit = async (e) => {
+                e.preventDefault();
+                const id = document.getElementById('barangId').value;
+                const params = {
+                    operation: id ? 'update' : 'create',
+                    id: id,
+                    kode_barang: document.getElementById('kodeBarang').value,
+                    nama_barang: document.getElementById('namaBarang').value,
+                    kategori: document.getElementById('kategori').value,
+                    harga_beli: document.getElementById('hargaBeli').value,
+                    harga_jual: document.getElementById('hargaJual').value,
+                    stok: document.getElementById('stok').value,
+                    id_supplier: document.getElementById('idSupplier').value
+                };
+                
+                const result = await apiCall('barang', params, 'POST');
+                if (result.success) {
+                    showToast(result.message);
+                    closeBarangModal();
+                    loadBarang();
+                } else {
+                    showToast(result.message, 'error');
+                }
+            };
+        }
+
+        function closeBarangModal() {
+            const modal = document.getElementById('barangModal');
+            if (modal) modal.remove();
+        }
+
+        async function editBarang(id) {
+            const result = await apiCall('barang', { operation: 'read' });
+            if (result.success) {
+                const barang = result.data.find(b => b.id === id);
+                if (barang) {
+                    showBarangModal(barang);
+                }
+            }
+        }
+
+        async function deleteBarang(id) {
+            if (confirm('Yakin ingin menghapus barang ini?')) {
+                const result = await apiCall('barang', { operation: 'delete', id: id }, 'POST');
+                if (result.success) {
+                    showToast(result.message);
+                    loadBarang();
+                } else {
+                    showToast(result.message, 'error');
+                }
+            }
+        }
+
+        // ==================== MASTER SUPPLIER ====================
+        async function loadSupplier() {
+            const result = await apiCall('supplier', { operation: 'read' });
+            const html = `
+                <button onclick="showSupplierModal()" style="width: auto; margin-bottom: 20px;">+ Tambah Supplier</button>
+                <div class="data-table">
+                    <table>
+                        <thead>
+                            <tr><th>Nama</th><th>Kontak</th><th>Alamat</th><th>Email</th><th>Aksi</th></tr>
+                        </thead>
+                        <tbody>
+                            ${result.success ? result.data.map(s => `
+                                <tr>
+                                    <td>${s.nama_supplier}</td>
+                                    <td>${s.kontak || '-'}</td>
+                                    <td>${s.alamat || '-'}</td>
+                                    <td>${s.email || '-'}</td>
+                                    <td>
+                                        <button onclick="editSupplier('${s.id}')" style="width: auto; padding: 5px 10px; margin-right:5px;">Edit</button>
+                                        <button onclick="deleteSupplier('${s.id}')" class="btn-danger" style="width: auto; padding: 5px 10px;">Hapus</button>
+                                    </td>
+                                </tr>
+                            `).join('') : '<tr><td colspan="5">Tidak ada data</td></tr>'}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            document.getElementById('pageContent').innerHTML = html;
+        }
+
+        function showSupplierModal(data = null) {
+            const isEdit = data !== null;
+            const modalHtml = `
+                <div id="supplierModal" class="modal active">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3>${isEdit ? 'Edit Supplier' : 'Tambah Supplier'}</h3>
+                            <span class="close-modal" onclick="closeSupplierModal()">&times;</span>
+                        </div>
+                        <form id="supplierForm">
+                            <input type="hidden" id="supplierId" value="${isEdit ? data.id : ''}">
+                            <div class="form-group">
+                                <label>Nama Supplier *</label>
+                                <input type="text" id="namaSupplier" required value="${isEdit ? data.nama_supplier : ''}">
+                            </div>
+                            <div class="form-group">
+                                <label>Kontak</label>
+                                <input type="text" id="kontak" value="${isEdit ? data.kontak || '' : ''}">
+                            </div>
+                            <div class="form-group">
+                                <label>Alamat</label>
+                                <textarea id="alamat">${isEdit ? data.alamat || '' : ''}</textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Email</label>
+                                <input type="email" id="email" value="${isEdit ? data.email || '' : ''}">
+                            </div>
+                            <div class="form-group">
+                                <label>Catatan</label>
+                                <textarea id="catatan">${isEdit ? data.catatan || '' : ''}</textarea>
+                            </div>
+                            <button type="submit">Simpan</button>
+                        </form>
+                    </div>
+                </div>
+            `;
+            
+            const existingModal = document.getElementById('supplierModal');
+            if (existingModal) existingModal.remove();
+            
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            document.getElementById('supplierForm').onsubmit = async (e) => {
+                e.preventDefault();
+                const id = document.getElementById('supplierId').value;
+                const params = {
+                    operation: id ? 'update' : 'create',
+                    id: id,
+                    nama_supplier: document.getElementById('namaSupplier').value,
+                    kontak: document.getElementById('kontak').value,
+                    alamat: document.getElementById('alamat').value,
+                    email: document.getElementById('email').value,
+                    catatan: document.getElementById('catatan').value
+                };
+                
+                const result = await apiCall('supplier', params, 'POST');
+                if (result.success) {
+                    showToast(result.message);
+                    closeSupplierModal();
+                    loadSupplier();
+                } else {
+                    showToast(result.message, 'error');
+                }
+            };
+        }
+
+        function closeSupplierModal() {
+            const modal = document.getElementById('supplierModal');
+            if (modal) modal.remove();
+        }
+
+        async function editSupplier(id) {
+            const result = await apiCall('supplier', { operation: 'read' });
+            if (result.success) {
+                const supplier = result.data.find(s => s.id === id);
+                if (supplier) {
+                    showSupplierModal(supplier);
+                }
+            }
+        }
+
+        async function deleteSupplier(id) {
+            if (confirm('Yakin ingin menghapus supplier ini?')) {
+                const result = await apiCall('supplier', { operation: 'delete', id: id }, 'POST');
+                if (result.success) {
+                    showToast(result.message);
+                    loadSupplier();
+                } else {
+                    showToast(result.message, 'error');
+                }
+            }
+        }
+
+        // ==================== MASTER KONSUMEN ====================
+        async function loadKonsumen() {
+            const result = await apiCall('konsumen', { operation: 'read' });
+            const html = `
+                <button onclick="showKonsumenModal()" style="width: auto; margin-bottom: 20px;">+ Tambah Konsumen</button>
+                <div class="data-table">
+                    <table>
+                        <thead>
+                            <tr><th>Nama</th><th>Email</th><th>Telepon</th><th>Alamat</th><th>Poin</th><th>Aksi</th></tr>
+                        </thead>
+                        <tbody>
+                            ${result.success ? result.data.map(k => `
+                                <tr>
+                                    <td>${k.nama}</td>
+                                    <td>${k.email || '-'}</td>
+                                    <td>${k.telepon || '-'}</td>
+                                    <td>${k.alamat || '-'}</td>
+                                    <td>${k.poin}</td>
+                                    <td>
+                                        <button onclick="editKonsumen('${k.id}')" style="width: auto; padding: 5px 10px; margin-right:5px;">Edit</button>
+                                        <button onclick="deleteKonsumen('${k.id}')" class="btn-danger" style="width: auto; padding: 5px 10px;">Hapus</button>
+                                    </td>
+                                </tr>
+                            `).join('') : '<tr><td colspan="6">Tidak ada data</td></tr>'}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            document.getElementById('pageContent').innerHTML = html;
+        }
+
+        function showKonsumenModal(data = null) {
+            const isEdit = data !== null;
+            const modalHtml = `
+                <div id="konsumenModal" class="modal active">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3>${isEdit ? 'Edit Konsumen' : 'Tambah Konsumen'}</h3>
+                            <span class="close-modal" onclick="closeKonsumenModal()">&times;</span>
+                        </div>
+                        <form id="konsumenForm">
+                            <input type="hidden" id="konsumenId" value="${isEdit ? data.id : ''}">
+                            <div class="form-group">
+                                <label>Nama *</label>
+                                <input type="text" id="namaKonsumen" required value="${isEdit ? data.nama : ''}">
+                            </div>
+                            <div class="form-group">
+                                <label>Email</label>
+                                <input type="email" id="emailKonsumen" value="${isEdit ? data.email || '' : ''}">
+                            </div>
+                            <div class="form-group">
+                                <label>Telepon</label>
+                                <input type="text" id="teleponKonsumen" value="${isEdit ? data.telepon || '' : ''}">
+                            </div>
+                            <div class="form-group">
+                                <label>Alamat</label>
+                                <textarea id="alamatKonsumen">${isEdit ? data.alamat || '' : ''}</textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Poin</label>
+                                <input type="number" id="poinKonsumen" value="${isEdit ? data.poin || '0' : '0'}">
+                            </div>
+                            <button type="submit">Simpan</button>
+                        </form>
+                    </div>
+                </div>
+            `;
+            
+            const existingModal = document.getElementById('konsumenModal');
+            if (existingModal) existingModal.remove();
+            
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            document.getElementById('konsumenForm').onsubmit = async (e) => {
+                e.preventDefault();
+                const id = document.getElementById('konsumenId').value;
+                const params = {
+                    operation: id ? 'update' : 'create',
+                    id: id,
+                    nama: document.getElementById('namaKonsumen').value,
+                    email: document.getElementById('emailKonsumen').value,
+                    telepon: document.getElementById('teleponKonsumen').value,
+                    alamat: document.getElementById('alamatKonsumen').value,
+                    poin: document.getElementById('poinKonsumen').value
+                };
+                
+                const result = await apiCall('konsumen', params, 'POST');
+                if (result.success) {
+                    showToast(result.message);
+                    closeKonsumenModal();
+                    loadKonsumen();
+                } else {
+                    showToast(result.message, 'error');
+                }
+            };
+        }
+
+        function closeKonsumenModal() {
+            const modal = document.getElementById('konsumenModal');
+            if (modal) modal.remove();
+        }
+
+        async function editKonsumen(id) {
+            const result = await apiCall('konsumen', { operation: 'read' });
+            if (result.success) {
+                const konsumen = result.data.find(k => k.id === id);
+                if (konsumen) {
+                    showKonsumenModal(konsumen);
+                }
+            }
+        }
+
+        async function deleteKonsumen(id) {
+            if (confirm('Yakin ingin menghapus konsumen ini?')) {
+                const result = await apiCall('konsumen', { operation: 'delete', id: id }, 'POST');
+                if (result.success) {
+                    showToast(result.message);
+                    loadKonsumen();
+                } else {
+                    showToast(result.message, 'error');
+                }
+            }
+        }
+
+        // ==================== PEMBELIAN (RESTOCK) ====================
+        let purchaseCart = [];
+        let purchaseProducts = [];
+
+        async function loadPembelian() {
+            const barangResult = await apiCall('barang', { operation: 'read' });
+            const supplierResult = await apiCall('supplier', { operation: 'read' });
+            
+            purchaseProducts = barangResult.success ? barangResult.data : [];
+            const suppliers = supplierResult.success ? supplierResult.data : [];
+            
+            const html = `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div>
+                        <h3>📦 Pilih Barang</h3>
+                        <input type="text" class="product-search" placeholder="Cari barang..." id="searchPurchaseProduct" onkeyup="searchPurchaseProducts()">
+                        <div class="product-grid" id="purchaseProductGrid">
+                            ${purchaseProducts.map(p => `
+                                <div class="product-card" onclick="addToPurchaseCart('${p.id}', '${p.nama_barang}', ${p.harga_beli})">
+                                    <div>${p.nama_barang}</div>
+                                    <div class="price">Stok: ${p.stok} | Beli: Rp ${formatNumber(p.harga_beli)}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <div>
+                        <h3>🛒 Keranjang Pembelian</h3>
+                        <div class="form-group">
+                            <label>Pilih Supplier</label>
+                            <select id="pilihSupplier">
+                                <option value="">Pilih Supplier</option>
+                                ${suppliers.map(s => `<option value="${s.id}">${s.nama_supplier}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Status Pembayaran</label>
+                            <select id="statusPembayaran">
+                                <option value="lunas">Lunas</option>
+                                <option value="hutang">Hutang</option>
+                                <option value="dp">DP</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Catatan</label>
+                            <textarea id="catatanPembelian" rows="2"></textarea>
+                        </div>
+                        <div id="purchaseCartItems"></div>
+                        <div class="form-group">
+                            <label>Total Biaya</label>
+                            <input type="text" id="totalBiaya" readonly style="background:#f0f0f0; font-size:20px; font-weight:bold;">
+                        </div>
+                        <button onclick="prosesPembelian()" class="btn-success">💾 Simpan Pembelian</button>
+                    </div>
+                </div>
+            `;
+            document.getElementById('pageContent').innerHTML = html;
+            updatePurchaseCartDisplay();
+        }
+
+        function searchPurchaseProducts() {
+            const searchTerm = document.getElementById('searchPurchaseProduct')?.value.toLowerCase() || '';
+            const filtered = purchaseProducts.filter(p => p.nama_barang.toLowerCase().includes(searchTerm));
+            const grid = document.getElementById('purchaseProductGrid');
+            if (grid) {
+                grid.innerHTML = filtered.map(p => `
+                    <div class="product-card" onclick="addToPurchaseCart('${p.id}', '${p.nama_barang}', ${p.harga_beli})">
+                        <div>${p.nama_barang}</div>
+                        <div class="price">Stok: ${p.stok} | Beli: Rp ${formatNumber(p.harga_beli)}</div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function addToPurchaseCart(id, name, price) {
+            const existing = purchaseCart.find(item => item.id_barang === id);
+            if (existing) {
+                existing.qty++;
+                existing.subtotal = existing.qty * existing.harga_beli;
+            } else {
+                purchaseCart.push({
+                    id_barang: id,
+                    nama_barang: name,
+                    harga_beli: price,
+                    qty: 1,
+                    subtotal: price
+                });
+            }
+            updatePurchaseCartDisplay();
+            showToast(`${name} ditambahkan ke keranjang pembelian`);
+        }
+
+        function updatePurchaseCartDisplay() {
+            const container = document.getElementById('purchaseCartItems');
+            if (!container) return;
+            
+            if (purchaseCart.length === 0) {
+                container.innerHTML = '<p>Keranjang kosong</p>';
+                updateTotalBiaya();
+                return;
+            }
+            
+            container.innerHTML = `
+                ${purchaseCart.map((item, index) => `
+                    <div class="cart-item">
+                        <div>
+                            <strong>${item.nama_barang}</strong><br>
+                            Rp ${formatNumber(item.harga_beli)}
+                        </div>
+                        <div class="cart-item-qty">
+                            <button onclick="updatePurchaseQty(${index}, -1)">-</button>
+                            <span>${item.qty}</span>
+                            <button onclick="updatePurchaseQty(${index}, 1)">+</button>
+                            <button class="btn-danger" style="width:auto; padding:5px 10px;" onclick="removeFromPurchaseCart(${index})">Hapus</button>
+                        </div>
+                        <div>Rp ${formatNumber(item.subtotal)}</div>
+                    </div>
+                `).join('')}
+            `;
+            updateTotalBiaya();
+        }
+
+        function updatePurchaseQty(index, change) {
+            const newQty = purchaseCart[index].qty + change;
+            if (newQty <= 0) {
+                purchaseCart.splice(index, 1);
+            } else {
+                purchaseCart[index].qty = newQty;
+                purchaseCart[index].subtotal = purchaseCart[index].qty * purchaseCart[index].harga_beli;
+            }
+            updatePurchaseCartDisplay();
+        }
+
+        function removeFromPurchaseCart(index) {
+            purchaseCart.splice(index, 1);
+            updatePurchaseCartDisplay();
+        }
+
+        function updateTotalBiaya() {
+            const total = purchaseCart.reduce((sum, item) => sum + item.subtotal, 0);
+            const totalField = document.getElementById('totalBiaya');
+            if (totalField) {
+                totalField.value = `Rp ${formatNumber(total)}`;
+            }
+            return total;
+        }
+
+        async function prosesPembelian() {
+            if (purchaseCart.length === 0) {
+                showToast('Tidak ada barang yang dibeli', 'error');
+                return;
+            }
+            
+            const idSupplier = document.getElementById('pilihSupplier')?.value;
+            if (!idSupplier) {
+                showToast('Pilih supplier terlebih dahulu', 'error');
+                return;
+            }
+            
+            const totalBiaya = purchaseCart.reduce((sum, item) => sum + item.subtotal, 0);
+            const statusPembayaran = document.getElementById('statusPembayaran')?.value || 'lunas';
+            const catatan = document.getElementById('catatanPembelian')?.value || '';
+            
+            const result = await apiCall('transaksi-pembelian', {
+                operation: 'create',
+                id_supplier: idSupplier,
+                total_biaya: totalBiaya,
+                status_pembayaran: statusPembayaran,
+                catatan: catatan,
+                dibuat_oleh: currentUser.email,
+                items: JSON.stringify(purchaseCart)
+            }, 'POST');
+            
+            if (result.success) {
+                showToast('Pembelian berhasil! Stok telah diperbarui', 'success');
+                purchaseCart = [];
+                loadPembelian();
+            } else {
+                showToast(result.message, 'error');
+            }
+        }
+
+        // ==================== PULSA, PEMBAYARAN, SERVIS (Similar pattern) ====================
+        async function loadPulsa() {
+            const result = await apiCall('pulsa', { operation: 'read' });
+            const html = `
+                <button onclick="showPulsaModal()" style="width: auto; margin-bottom: 20px;">+ Tambah Pulsa</button>
+                <div class="data-table">
+                    <table>
+                        <thead>
+                            <tr><th>Operator</th><th>Nominal</th><th>Harga Beli</th><th>Harga Jual</th><th>Stok Deposit</th><th>Status</th><th>Aksi</th></tr>
+                        </thead>
+                        <tbody>
+                            ${result.success ? result.data.map(p => `
+                                <tr>
+                                    <td>${p.operator}</td>
+                                    <td>${p.nominal}</td>
+                                    <td>Rp ${formatNumber(p.harga_beli)}</td>
+                                    <td>Rp ${formatNumber(p.harga_jual)}</td>
+                                    <td>${p.stok_deposit}</td>
+                                    <td>${p.status}</td>
+                                    <td>
+                                        <button onclick="editPulsa('${p.id}')" style="width: auto; padding: 5px 10px; margin-right:5px;">Edit</button>
+                                        <button onclick="deletePulsa('${p.id}')" class="btn-danger" style="width: auto; padding: 5px 10px;">Hapus</button>
+                                    </td>
+                                </tr>
+                            `).join('') : '<tr><td colspan="7">Tidak ada data</td></tr>'}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            document.getElementById('pageContent').innerHTML = html;
+        }
+
+        function showPulsaModal(data = null) {
+            const isEdit = data !== null;
+            const modalHtml = `
+                <div id="pulsaModal" class="modal active">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3>${isEdit ? 'Edit Pulsa' : 'Tambah Pulsa'}</h3>
+                            <span class="close-modal" onclick="closePulsaModal()">&times;</span>
+                        </div>
+                        <form id="pulsaForm">
+                            <input type="hidden" id="pulsaId" value="${isEdit ? data.id : ''}">
+                            <div class="form-group">
+                                <label>ID Barang (relasi)</label>
+                                <input type="text" id="idBarangPulsa" value="${isEdit ? data.id_barang || '' : ''}">
+                            </div>
+                            <div class="form-group">
+                                <label>Operator *</label>
+                                <input type="text" id="operator" required value="${isEdit ? data.operator : ''}">
+                            </div>
+                            <div class="form-group">
+                                <label>Nominal</label>
+                                <input type="text" id="nominal" value="${isEdit ? data.nominal : ''}">
+                            </div>
+                            <div class="form-group">
+                                <label>Harga Beli</label>
+                                <input type="number" id="hargaBeliPulsa" value="${isEdit ? data.harga_beli : '0'}">
+                            </div>
+                            <div class="form-group">
+                                <label>Harga Jual</label>
+                                <input type="number" id="hargaJualPulsa" value="${isEdit ? data.harga_jual : '0'}">
+                            </div>
+                            <div class="form-group">
+                                <label>Stok Deposit</label>
+                                <input type="number" id="stokDeposit" value="${isEdit ? data.stok_deposit : '0'}">
+                            </div>
+                            <div class="form-group">
+                                <label>Status</label>
+                                <select id="statusPulsa">
+                                    <option value="aktif" ${isEdit && data.status === 'aktif' ? 'selected' : ''}>Aktif</option>
+                                    <option value="nonaktif" ${isEdit && data.status === 'nonaktif' ? 'selected' : ''}>Nonaktif</option>
+                                </select>
+                            </div>
+                            <button type="submit">Simpan</button>
+                        </form>
+                    </div>
+                </div>
+            `;
+            
+            const existingModal = document.getElementById('pulsaModal');
+            if (existingModal) existingModal.remove();
+            
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            document.getElementById('pulsaForm').onsubmit = async (e) => {
+                e.preventDefault();
+                const id = document.getElementById('pulsaId').value;
+                const params = {
+                    operation: id ? 'update' : 'create',
+                    id: id,
+                    id_barang: document.getElementById('idBarangPulsa').value,
+                    operator: document.getElementById('operator').value,
+                    nominal: document.getElementById('nominal').value,
+                    harga_beli: document.getElementById('hargaBeliPulsa').value,
+                    harga_jual: document.getElementById('hargaJualPulsa').value,
+                    stok_deposit: document.getElementById('stokDeposit').value,
+                    status: document.getElementById('statusPulsa').value
+                };
+                
+                const result = await apiCall('pulsa', params, 'POST');
+                if (result.success) {
+                    showToast(result.message);
+                    closePulsaModal();
+                    loadPulsa();
+                } else {
+                    showToast(result.message, 'error');
+                }
+            };
+        }
+
+        function closePulsaModal() {
+            const modal = document.getElementById('pulsaModal');
+            if (modal) modal.remove();
+        }
+
+        async function editPulsa(id) {
+            const result = await apiCall('pulsa', { operation: 'read' });
+            if (result.success) {
+                const pulsa = result.data.find(p => p.id === id);
+                if (pulsa) {
+                    showPulsaModal(pulsa);
+                }
+            }
+        }
+
+        async function deletePulsa(id) {
+            if (confirm('Yakin ingin menghapus pulsa ini?')) {
+                const result = await apiCall('pulsa', { operation: 'delete', id: id }, 'POST');
+                if (result.success) {
+                    showToast(result.message);
+                    loadPulsa();
+                } else {
+                    showToast(result.message, 'error');
+                }
+            }
+        }
+
+        // Simplified for Pembayaran and Servis (similar pattern)
+        async function loadPembayaran() {
+            const result = await apiCall('pembayaran', { operation: 'read' });
+            const html = `
+                <button onclick="showPembayaranModal()" style="width: auto; margin-bottom: 20px;">+ Tambah Pembayaran Online</button>
+                <div class="data-table">
+                    <table>
+                        <thead>
+                            <tr><th>Provider</th><th>Jenis Layanan</th><th>Fee Beli</th><th>Fee Jual</th><th>Stok Deposit</th><th>Status</th><th>Aksi</th></tr>
+                        </thead>
+                        <tbody>
+                            ${result.success ? result.data.map(p => `
+                                <tr>
+                                    <td>${p.provider}</td>
+                                    <td>${p.jenis_layanan}</td>
+                                    <td>Rp ${formatNumber(p.fee_beli)}</td>
+                                    <td>Rp ${formatNumber(p.fee_jual)}</td>
+                                    <td>${p.stok_deposit}</td>
+                                    <td>${p.status}</td>
+                                    <td>
+                                        <button onclick="editPembayaran('${p.id}')" style="width: auto; padding: 5px 10px; margin-right:5px;">Edit</button>
+                                        <button onclick="deletePembayaran('${p.id}')" class="btn-danger" style="width: auto; padding: 5px 10px;">Hapus</button>
+                                    </td>
+                                </tr>
+                            `).join('') : '<tr><td colspan="7">Tidak ada data</td></tr>'}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            document.getElementById('pageContent').innerHTML = html;
+        }
+
+        function showPembayaranModal(data = null) {
+            const isEdit = data !== null;
+            const modalHtml = `
+                <div id="pembayaranModal" class="modal active">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3>${isEdit ? 'Edit Pembayaran' : 'Tambah Pembayaran'}</h3>
+                            <span class="close-modal" onclick="closePembayaranModal()">&times;</span>
+                        </div>
+                        <form id="pembayaranForm">
+                            <input type="hidden" id="pembayaranId" value="${isEdit ? data.id : ''}">
+                            <div class="form-group">
+                                <label>ID Barang (relasi)</label>
+                                <input type="text" id="idBarangPembayaran" value="${isEdit ? data.id_barang || '' : ''}">
+                            </div>
+                            <div class="form-group">
+                                <label>Provider *</label>
+                                <input type="text" id="provider" required value="${isEdit ? data.provider : ''}">
+                            </div>
+                            <div class="form-group">
+                                <label>Jenis Layanan</label>
+                                <input type="text" id="jenisLayanan" value="${isEdit ? data.jenis_layanan : ''}">
+                            </div>
+                            <div class="form-group">
+                                <label>Fee Beli</label>
+                                <input type="number" id="feeBeli" value="${isEdit ? data.fee_beli : '0'}">
+                            </div>
+                            <div class="form-group">
+                                <label>Fee Jual</label>
+                                <input type="number" id="feeJual" value="${isEdit ? data.fee_jual : '0'}">
+                            </div>
+                            <div class="form-group">
+                                <label>Stok Deposit</label>
+                                <input type="number" id="stokDepositPembayaran" value="${isEdit ? data.stok_deposit : '0'}">
+                            </div>
+                            <div class="form-group">
+                                <label>Status</label>
+                                <select id="statusPembayaran">
+                                    <option value="aktif" ${isEdit && data.status === 'aktif' ? 'selected' : ''}>Aktif</option>
+                                    <option value="nonaktif" ${isEdit && data.status === 'nonaktif' ? 'selected' : ''}>Nonaktif</option>
+                                </select>
+                            </div>
+                            <button type="submit">Simpan</button>
+                        </form>
+                    </div>
+                </div>
+            `;
+            
+            const existingModal = document.getElementById('pembayaranModal');
+            if (existingModal) existingModal.remove();
+            
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            document.getElementById('pembayaranForm').onsubmit = async (e) => {
+                e.preventDefault();
+                const id = document.getElementById('pembayaranId').value;
+                const params = {
+                    operation: id ? 'update' : 'create',
+                    id: id,
+                    id_barang: document.getElementById('idBarangPembayaran').value,
+                    provider: document.getElementById('provider').value,
+                    jenis_layanan: document.getElementById('jenisLayanan').value,
+                    fee_beli: document.getElementById('feeBeli').value,
+                    fee_jual: document.getElementById('feeJual').value,
+                    stok_deposit: document.getElementById('stokDepositPembayaran').value,
+                    status: document.getElementById('statusPembayaran').value
+                };
+                
+                const result = await apiCall('pembayaran', params, 'POST');
+                if (result.success) {
+                    showToast(result.message);
+                    closePembayaranModal();
+                    loadPembayaran();
+                } else {
+                    showToast(result.message, 'error');
+                }
+            };
+        }
+
+        function closePembayaranModal() {
+            const modal = document.getElementById('pembayaranModal');
+            if (modal) modal.remove();
+        }
+
+        async function editPembayaran(id) {
+            const result = await apiCall('pembayaran', { operation: 'read' });
+            if (result.success) {
+                const pembayaran = result.data.find(p => p.id === id);
+                if (pembayaran) {
+                    showPembayaranModal(pembayaran);
+                }
+            }
+        }
+
+        async function deletePembayaran(id) {
+            if (confirm('Yakin ingin menghapus pembayaran ini?')) {
+                const result = await apiCall('pembayaran', { operation: 'delete', id: id }, 'POST');
+                if (result.success) {
+                    showToast(result.message);
+                    loadPembayaran();
+                } else {
+                    showToast(result.message, 'error');
+                }
+            }
+        }
+
+        async function loadServis() {
+            const result = await apiCall('servis', { operation: 'read' });
+            const html = `
+                <button onclick="showServisModal()" style="width: auto; margin-bottom: 20px;">+ Tambah Servis</button>
+                <div class="data-table">
+                    <table>
+                        <thead>
+                            <tr><th>Nama Servis</th><th>Kategori</th><th>Biaya Jasa</th><th>Estimasi Hari</th><th>Garansi Hari</th><th>Status</th><th>Aksi</th></tr>
+                        </thead>
+                        <tbody>
+                            ${result.success ? result.data.map(s => `
+                                <tr>
+                                    <td>${s.nama_servis}</td>
+                                    <td>${s.kategori || '-'}</td>
+                                    <td>Rp ${formatNumber(s.biaya_jasa)}</td>
+                                    <td>${s.estimasi_hari}</td>
+                                    <td>${s.garansi_hari}</td>
+                                    <td>${s.status}</td>
+                                    <td>
+                                        <button onclick="editServis('${s.id}')" style="width: auto; padding: 5px 10px; margin-right:5px;">Edit</button>
+                                        <button onclick="deleteServis('${s.id}')" class="btn-danger" style="width: auto; padding: 5px 10px;">Hapus</button>
+                                    </td>
+                                </tr>
+                            `).join('') : '<tr><td colspan="7">Tidak ada数据</tr>'}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            document.getElementById('pageContent').innerHTML = html;
+        }
+
+        function showServisModal(data = null) {
+            const isEdit = data !== null;
+            const modalHtml = `
+                <div id="servisModal" class="modal active">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3>${isEdit ? 'Edit Servis' : 'Tambah Servis'}</h3>
+                            <span class="close-modal" onclick="closeServisModal()">&times;</span>
+                        </div>
+                        <form id="servisForm">
+                            <input type="hidden" id="servisId" value="${isEdit ? data.id : ''}">
+                            <div class="form-group">
+                                <label>Nama Servis *</label>
+                                <input type="text" id="namaServis" required value="${isEdit ? data.nama_servis : ''}">
+                            </div>
+                            <div class="form-group">
+                                <label>Kategori</label>
+                                <input type="text" id="kategoriServis" value="${isEdit ? data.kategori || '' : ''}">
+                            </div>
+                            <div class="form-group">
+                                <label>Biaya Jasa</label>
+                                <input type="number" id="biayaJasa" value="${isEdit ? data.biaya_jasa : '0'}">
+                            </div>
+                            <div class="form-group">
+                                <label>Estimasi Hari</label>
+                                <input type="number" id="estimasiHari" value="${isEdit ? data.estimasi_hari : '1'}">
+                            </div>
+                            <div class="form-group">
+                                <label>Garansi Hari</label>
+                                <input type="number" id="garansiHari" value="${isEdit ? data.garansi_hari : '0'}">
+                            </div>
+                            <div class="form-group">
+                                <label>ID Part Default</label>
+                                <input type="text" id="idPartDefault" value="${isEdit ? data.id_part_default || '' : ''}">
+                            </div>
+                            <div class="form-group">
+                                <label>Status</label>
+                                <select id="statusServis">
+                                    <option value="aktif" ${isEdit && data.status === 'aktif' ? 'selected' : ''}>Aktif</option>
+                                    <option value="nonaktif" ${isEdit && data.status === 'nonaktif' ? 'selected' : ''}>Nonaktif</option>
+                                </select>
+                            </div>
+                            <button type="submit">Simpan</button>
+                        </form>
+                    </div>
+                </div>
+            `;
+            
+            const existingModal = document.getElementById('servisModal');
+            if (existingModal) existingModal.remove();
+            
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            document.getElementById('servisForm').onsubmit = async (e) => {
+                e.preventDefault();
+                const id = document.getElementById('servisId').value;
+                const params = {
+                    operation: id ? 'update' : 'create',
+                    id: id,
+                    nama_servis: document.getElementById('namaServis').value,
+                    kategori: document.getElementById('kategoriServis').value,
+                    biaya_jasa: document.getElementById('biayaJasa').value,
+                    estimasi_hari: document.getElementById('estimasiHari').value,
+                    garansi_hari: document.getElementById('garansiHari').value,
+                    id_part_default: document.getElementById('idPartDefault').value,
+                    status: document.getElementById('statusServis').value
+                };
+                
+                const result = await apiCall('servis', params, 'POST');
+                if (result.success) {
+                    showToast(result.message);
+                    closeServisModal();
+                    loadServis();
+                } else {
+                    showToast(result.message, 'error');
+                }
+            };
+        }
+
+        function closeServisModal() {
+            const modal = document.getElementById('servisModal');
+            if (modal) modal.remove();
+        }
+
+        async function editServis(id) {
+            const result = await apiCall('servis', { operation: 'read' });
+            if (result.success) {
+                const servis = result.data.find(s => s.id === id);
+                if (servis) {
+                    showServisModal(servis);
+                }
+            }
+        }
+
+        async function deleteServis(id) {
+            if (confirm('Yakin ingin menghapus servis ini?')) {
+                const result = await apiCall('servis', { operation: 'delete', id: id }, 'POST');
+                if (result.success) {
+                    showToast(result.message);
+                    loadServis();
+                } else {
+                    showToast(result.message, 'error');
+                }
+            }
+        }
+
+        // ==================== LAPORAN ====================
+        async function loadLaporan() {
+            const html = `
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Filter Laporan</h3>
+                        <div class="form-group">
+                            <label>Dari Tanggal</label>
+                            <input type="date" id="laporanDari">
+                        </div>
+                        <div class="form-group">
+                            <label>Sampai Tanggal</label>
+                            <input type="date" id="laporanSampai">
+                        </div>
+                        <button onclick="loadLaporanPenjualan()" style="margin-bottom:10px;">📊 Tampilkan Laporan Penjualan</button>
+                        <button onclick="loadLaporanServis()" class="btn-warning">🔧 Tampilkan Laporan Servis</button>
+                    </div>
+                </div>
+                <div id="laporanResult"></div>
+            `;
+            document.getElementById('pageContent').innerHTML = html;
+        }
+
+        async function loadLaporanPenjualan() {
+            const dari = document.getElementById('laporanDari')?.value || '';
+            const sampai = document.getElementById('laporanSampai')?.value || '';
+            
+            const result = await apiCall('laporan-penjualan', { dari, sampai });
+            
+            if (result.success) {
+                const html = `
+                    <div class="stat-card" style="margin-top:20px;">
+                        <h3>📊 Statistik Penjualan</h3>
+                        <p>Total: Rp ${formatNumber(result.statistik.total)}</p>
+                        <p>Jumlah Transaksi: ${formatNumber(result.statistik.jumlah_transaksi)}</p>
+                        <p>Rata-rata: Rp ${formatNumber(result.statistik.rata_rata)}</p>
+                    </div>
+                    <div class="data-table" style="margin-top:20px;">
+                        <table>
+                            <thead>
+                                <tr><th>ID Transaksi</th><th>Tanggal</th><th>Konsumen</th><th>Grand Total</th><th>Metode</th></tr>
+                            </thead>
+                            <tbody>
+                                ${result.data.map(t => `
+                                    <tr>
+                                        <td>${t.id_transaksi}</td>
+                                        <td>${new Date(t.tanggal).toLocaleDateString('id-ID')}</td>
+                                        <td>${t.id_konsumen || 'Umum'}</td>
+                                        <td>Rp ${formatNumber(t.grand_total)}</td>
+                                        <td>${t.metode_pembayaran}</td>
+                                    </tr>
+                                `).join('')}
+                                ${result.data.length === 0 ? '<tr><td colspan="5">Tidak ada data</td></tr>' : ''}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                document.getElementById('laporanResult').innerHTML = html;
+            } else {
+                showToast(result.message, 'error');
+            }
+        }
+
+        async function loadLaporanServis() {
+            const dari = document.getElementById('laporanDari')?.value || '';
+            const sampai = document.getElementById('laporanSampai')?.value || '';
+            
+            const result = await apiCall('laporan-servis', { dari, sampai });
+            
+            if (result.success) {
+                const html = `
+                    <div class="stat-card" style="margin-top:20px;">
+                        <h3>🔧 Statistik Servis</h3>
+                        <p>Total Servis: ${formatNumber(result.statistik.total_servis)}</p>
+                        <p>Total Pendapatan: Rp ${formatNumber(result.statistik.total_pendapatan)}</p>
+                    </div>
+                    <div class="data-table" style="margin-top:20px;">
+                        <table>
+                            <thead>
+                                <tr><th>Tanggal</th><th>Nama Servis</th><th>Qty</th><th>Subtotal</th></tr>
+                            </thead>
+                            <tbody>
+                                ${result.data.map(s => `
+                                    <tr>
+                                        <td>${s.tanggal ? new Date(s.tanggal).toLocaleDateString('id-ID') : '-'}</td>
+                                        <td>${s.nama_barang}</td>
+                                        <td>${s.qty}</td>
+                                        <td>Rp ${formatNumber(s.subtotal)}</td>
+                                    </tr>
+                                `).join('')}
+                                ${result.data.length === 0 ? '<tr><td colspan="4">Tidak ada data</td></tr>' : ''}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                document.getElementById('laporanResult').innerHTML = html;
+            } else {
+                showToast(result.message, 'error');
+            }
+        }
+
+        // ==================== PROFIL TOKO ====================
+        async function loadProfil() {
+            const config = await loadConfig();
+            const html = `
+                <div class="stat-card">
+                    <h3>🏪 Profil Toko</h3>
+                    <form id="profilForm">
+                        <div class="form-group">
+                            <label>Nama Toko</label>
+                            <input type="text" id="namaToko" value="${config.nama_toko || ''}">
+                        </div>
+                        <div class="form-group">
+                            <label>Alamat</label>
+                            <textarea id="alamatToko" rows="2">${config.alamat || ''}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Telepon</label>
+                            <input type="text" id="teleponToko" value="${config.telepon || ''}">
+                        </div>
+                        <div class="form-group">
+                            <label>WhatsApp</label>
+                            <input type="text" id="whatsappToko" value="${config.whatsapp || ''}">
+                        </div>
+                        <div class="form-group">
+                            <label>Email Toko</label>
+                            <input type="email" id="emailToko" value="${config.email || ''}">
+                        </div>
+                        <div class="form-group">
+                            <label>PPN (%)</label>
+                            <input type="number" id="ppn" value="${config.ppn || '11'}">
+                        </div>
+                        <div class="form-group">
+                            <label>Poin (%)</label>
+                            <input type="number" id="poinPersen" value="${config.poin_persen || '1'}">
+                        </div>
+                        <div class="form-group">
+                            <label>Footer Struk</label>
+                            <textarea id="footerText" rows="2">${config.footer_text || 'Terima kasih telah berbelanja'}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Header Print</label>
+                            <input type="text" id="printHeader" value="${config.print_header || 'COUNTER HP MAKMUR'}">
+                        </div>
+                        <button type="submit">💾 Simpan Pengaturan</button>
+                    </form>
+                </div>
+            `;
+            document.getElementById('pageContent').innerHTML = html;
+            
+            document.getElementById('profilForm').onsubmit = async (e) => {
+                e.preventDefault();
+                
+                const fields = ['nama_toko', 'alamat', 'telepon', 'whatsapp', 'email', 'ppn', 'poin_persen', 'footer_text', 'print_header'];
+                const ids = ['namaToko', 'alamatToko', 'teleponToko', 'whatsappToko', 'emailToko', 'ppn', 'poinPersen', 'footerText', 'printHeader'];
+                
+                for (let i = 0; i < fields.length; i++) {
+                    const value = document.getElementById(ids[i])?.value || '';
+                    await apiCall('konfigurasi', { operation: 'update', key: fields[i], value: value }, 'POST');
+                }
+                
+                showToast('Pengaturan berhasil disimpan');
+            };
+        }
+
+        // ==================== UTILITY ====================
+        function formatNumber(num) {
+            if (num === undefined || num === null) return '0';
+            return Number(num).toLocaleString('id-ID');
+        }
+
+        // ==================== INITIALIZATION ====================
+        document.getElementById('loginForm').addEventListener('submit', handleLogin);
+        
+        // Setup sidebar menu
+        document.querySelectorAll('.sidebar-menu li').forEach(li => {
+            li.addEventListener('click', () => {
+                const page = li.dataset.page;
+                if (page === 'logout') {
+                    logout();
+                } else if (page) {
+                    loadPage(page);
+                }
+            });
+        });
+        
+        // Check session on load
+        checkSession();
+    </script>
+</body>
+</html>

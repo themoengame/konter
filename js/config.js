@@ -6,7 +6,7 @@ const BASE_URL = 'https://script.google.com/macros/s/AKfycbwJNO7SRTNtoLvyJcTJg0O
 // Konfigurasi role dan menu
 const ROLE_MENU = {
     admin: [
-        { id: 'dashboard', icon: '📊', label: 'Dashboard', page: 'dashboard-home' },
+        { id: 'dashboard', icon: '📊', label: 'Dashboard', page: 'home' },
         { id: 'penjualan', icon: '💰', label: 'Transaksi Penjualan', page: 'penjualan' },
         { id: 'pembelian', icon: '📦', label: 'Transaksi Pembelian', page: 'pembelian' },
         { id: 'barang', icon: '📱', label: 'Master Barang', page: 'master-barang' },
@@ -20,13 +20,13 @@ const ROLE_MENU = {
         { id: 'laporan-servis', icon: '🛠️', label: 'Laporan Servis', page: 'laporan-servis' }
     ],
     kasir: [
-        { id: 'dashboard', icon: '📊', label: 'Dashboard', page: 'dashboard-home' },
+        { id: 'dashboard', icon: '📊', label: 'Dashboard', page: 'home' },
         { id: 'penjualan', icon: '💰', label: 'Transaksi Penjualan', page: 'penjualan' },
         { id: 'konsumen', icon: '👥', label: 'Master Konsumen', page: 'master-konsumen' },
         { id: 'laporan-penjualan', icon: '📈', label: 'Laporan Penjualan', page: 'laporan-penjualan' }
     ],
     owner: [
-        { id: 'dashboard', icon: '📊', label: 'Dashboard', page: 'dashboard-home' },
+        { id: 'dashboard', icon: '📊', label: 'Dashboard', page: 'home' },
         { id: 'penjualan', icon: '💰', label: 'Transaksi Penjualan', page: 'penjualan' },
         { id: 'pembelian', icon: '📦', label: 'Transaksi Pembelian', page: 'pembelian' },
         { id: 'barang', icon: '📱', label: 'Master Barang', page: 'master-barang' },
@@ -41,19 +41,20 @@ const ROLE_MENU = {
     ]
 };
 
-// Mapping nama page ke fungsi render
-const PAGE_RENDERERS = {
-    'dashboard-home': renderDashboard,
-    'penjualan': renderPenjualan,
-    'pembelian': renderPembelian,
-    'master-barang': () => renderMaster('barang'),
-    'master-supplier': () => renderMaster('supplier'),
-    'master-konsumen': () => renderMaster('konsumen'),
-    'master-pulsa': () => renderMaster('pulsa'),
-    'master-pembayaran': () => renderMaster('pembayaran'),
-    'master-servis': () => renderMaster('servis'),
-    'laporan-penjualan': renderLaporanPenjualan,
-    'laporan-servis': renderLaporanServis
+// Mapping page ke file HTML (tanpa fungsi render)
+const PAGE_FILES = {
+    'home': 'pages/home.html',
+    'penjualan': 'pages/penjualan.html',
+    'pembelian': 'pages/pembelian.html',
+    'master-barang': 'pages/master-barang.html',
+    'master-supplier': 'pages/master-supplier.html',
+    'master-konsumen': 'pages/master-konsumen.html',
+    'master-pulsa': 'pages/master-pulsa.html',
+    'master-pembayaran': 'pages/master-pembayaran.html',
+    'master-servis': 'pages/master-servis.html',
+    'profil-toko': 'pages/profil-toko.html',
+    'laporan-penjualan': 'pages/laporan-penjualan.html',
+    'laporan-servis': 'pages/laporan-servis.html'
 };
 
 // Endpoint mapping untuk setiap master
@@ -66,7 +67,7 @@ const MASTER_ENDPOINTS = {
     servis: 'servis'
 };
 
-// Kolom untuk setiap master (digunakan untuk form dan tabel)
+// Kolom untuk setiap master
 const MASTER_COLUMNS = {
     barang: [
         { key: 'id', label: 'ID', type: 'text', readonly: true },

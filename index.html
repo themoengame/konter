@@ -567,26 +567,48 @@
         }
 
         async function apiCall(action, params = {}, method = 'GET') {
-            const url = new URL(BASE_URL);
-            url.searchParams.append('action', action);
-            url.searchParams.append('method', method);
-            
-            for (const [key, value] of Object.entries(params)) {
-                if (value !== undefined && value !== null && value !== '') {
-                    url.searchParams.append(key, value);
-                }
-            }
-            
-            try {
-                const response = await fetch(url.toString());
-                const data = await response.json();
-                return data;
-            } catch (error) {
-                console.error('API Error:', error);
-                showToast('Koneksi error: ' + error.message, 'error');
-                return { success: false, message: error.message };
+    const url = new URL(BASE_URL);
+    url.searchParams.append('action', action);
+    
+    // Untuk GET request, tambahkan params ke URL
+    if (method === 'GET') {
+        for (const [key, value] of Object.entries(params)) {
+            if (value !== undefined && value !== null && value !== '') {
+                url.searchParams.append(key, value);
             }
         }
+    }
+    
+    const fetchOptions = {
+        method: method,
+        mode: 'cors',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        }
+    };
+    
+    // Untuk POST request, kirim params sebagai body
+    if (method === 'POST') {
+        const formBody = new URLSearchParams();
+        formBody.append('action', action);
+        for (const [key, value] of Object.entries(params)) {
+            if (value !== undefined && value !== null && value !== '') {
+                formBody.append(key, value);
+            }
+        }
+        fetchOptions.body = formBody;
+    }
+    
+    try {
+        const response = await fetch(url.toString(), fetchOptions);
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('API Error:', error);
+        showToast('Koneksi error: ' + error.message, 'error');
+        return { success: false, message: error.message };
+    }
+}
 
         async function loadConfig() {
             const result = await apiCall('konfigurasi', { operation: 'read' });

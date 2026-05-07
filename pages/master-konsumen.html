@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Master Konsumen</title>
+</head>
+<body>
+    <div class="master-container">
+        <div class="section-header">
+            <h3>👥 Master Konsumen</h3>
+            <button class="btn-primary" onclick="showAddKonsumenModal()">+ Tambah Konsumen</button>
+        </div>
+        
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nama</th>
+                        <th>Email</th>
+                        <th>Telepon</th>
+                        <th>Alamat</th>
+                        <th>Poin</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="konsumenTableBody">
+                    <tr><td colspan="7" style="text-align:center">Memuat data...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let konsumenData = [];
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadKonsumen();
+        });
+        
+        async function loadKonsumen() {
+            try {
+                konsumenData = await getAllMaster('konsumen');
+                renderKonsumenTable();
+            } catch (error) {
+                console.error('Error loading konsumen:', error);
+                document.getElementById('konsumenTableBody').innerHTML = '<tr><td colspan="7" style="text-align:center">Gagal memuat data</td></tr>';
+            }
+        }
+        
+        function renderKonsumenTable() {
+            const tbody = document.getElementById('konsumenTableBody');
+            if (konsumenData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center">Tidak ada data</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = konsumenData.map(item => `
+                <tr>
+                    <td>${item.id || '-'}</td>
+                    <td>${escapeHtml(item.nama) || '-'}</td>
+                    <td>${item.email || '-'}</td>
+                    <td>${item.telepon || '-'}</td>
+                    <td>${escapeHtml(item.alamat) || '-'}</td>
+                    <td>${item.poin || 0}</td>
+                    <td class="actions">
+                        <button class="btn-edit" onclick="editKonsumen('${item.id}')">Edit</button>
+                        <button class="btn-delete" onclick="deleteKonsumen('${item.id}')">Hapus</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        function showAddKonsumenModal() {
+            const modal = document.getElementById('globalModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalBody = document.getElementById('modalBody');
+            
+            modalTitle.textContent = 'Tambah Konsumen';
+            modalBody.innerHTML = `
+                <form id="konsumenForm">
+                    <div class="form-group">
+                        <label>Nama *</label>
+                        <input type="text" name="nama" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Email *</label>
+                        <input type="email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Telepon *</label>
+                        <input type="text" name="telepon" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Alamat</label>
+                        <textarea name="alamat" rows="2"></textarea>
+                    </div>
+                </form>
+            `;
+            
+            const saveBtn = modal.querySelector('.modal-save');
+            saveBtn.onclick = async () => {
+                const form = document.getElementById('konsumenForm');
+                const formData = new FormData(form);
+                const data = {};
+                formData.forEach((value, key) => { data[key] = value; });
+                
+                try {
+                    showLoading(true);
+                    await createMaster('konsumen', data);
+                    showToast('Konsumen berhasil ditambahkan', 'success');
+                    closeModal();
+                    await loadKonsumen();
+                } catch (error) {
+                    showToast(error.message, 'error');
+                } finally {
+                    showLoading(false);
+                }
+            };
+            
+            modal.style.display = 'flex';
+        }
+        
+        async function editKonsumen(id) {
+            const item = konsumenData.find(k => k.id === id);
+            if (!item) return;
+            
+            const modal = document.getElementById('globalModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalBody = document.getElementById('modalBody');
+            
+            modalTitle.textContent = 'Edit Konsumen';
+            modalBody.innerHTML = `
+                <form id="konsumenForm">
+                    <div class="form-group">
+                        <label>Nama</label>
+                        <input type="text" name="nama" value="${escapeHtml(item.nama || '')}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" name="email" value="${item.email || ''}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Telepon</label>
+                        <input type="text" name="telepon" value="${item.telepon || ''}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Alamat</label>
+                        <textarea name="alamat" rows="2">${escapeHtml(item.alamat || '')}</textarea>
+                    </div>
+                </form>
+            `;
+            
+            const saveBtn = modal.querySelector('.modal-save');
+            saveBtn.onclick = async () => {
+                const form = document.getElementById('konsumenForm');
+                const formData = new FormData(form);
+                const data = {};
+                formData.forEach((value, key) => { data[key] = value; });
+                
+                try {
+                    showLoading(true);
+                    await updateMaster('konsumen', id, data);
+                    showToast('Konsumen berhasil diupdate', 'success');
+                    closeModal();
+                    await loadKonsumen();
+                } catch (error) {
+                    showToast(error.message, 'error');
+                } finally {
+                    showLoading(false);
+                }
+            };
+            
+            modal.style.display = 'flex';
+        }
+        
+        async function deleteKonsumen(id) {
+            const confirmed = await confirmAction('Yakin hapus konsumen ini?');
+            if (!confirmed) return;
+            
+            try {
+                showLoading(true);
+                await deleteMaster('konsumen', id);
+                showToast('Konsumen berhasil dihapus', 'success');
+                await loadKonsumen();
+            } catch (error) {
+                showToast(error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        window.showAddKonsumenModal = showAddKonsumenModal;
+        window.editKonsumen = editKonsumen;
+        window.deleteKonsumen = deleteKonsumen;
+    </script>
+</body>
+</html>

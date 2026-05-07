@@ -127,6 +127,13 @@
 
         .btn-warning {
             background: var(--warning);
+            color: var(--dark);
+        }
+
+        .btn-sm {
+            width: auto;
+            padding: 5px 12px;
+            font-size: 12px;
         }
 
         /* Main App Layout */
@@ -339,7 +346,7 @@
 
         .toast.success { background: var(--success); }
         .toast.error { background: var(--danger); }
-        .toast.warning { background: var(--warning); }
+        .toast.warning { background: var(--warning); color: var(--dark); }
 
         @keyframes slideIn {
             from { transform: translateX(100%); opacity: 0; }
@@ -444,6 +451,26 @@
             gap: 20px;
         }
 
+        /* Report tabs */
+        .report-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .report-tab {
+            background: var(--light);
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .report-tab.active {
+            background: var(--primary);
+            color: white;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .sidebar {
@@ -485,9 +512,10 @@
             100% { transform: rotate(360deg); }
         }
 
-        button:disabled .loading-spinner {
-            display: inline-block;
-        }
+        .text-danger { color: var(--danger); }
+        .text-success { color: var(--success); }
+        .text-warning { color: var(--warning); }
+        .text-primary { color: var(--primary); }
     </style>
 </head>
 <body>
@@ -619,7 +647,6 @@
                 return data;
             } catch (error) {
                 console.error('API Error:', error);
-                showToast('Koneksi error: ' + error.message, 'error');
                 return { success: false, message: error.message };
             }
         }
@@ -709,7 +736,6 @@
             };
             document.getElementById('pageTitle').textContent = titles[page] || 'Dashboard';
             
-            // Update active menu
             document.querySelectorAll('.sidebar-menu li').forEach(li => {
                 li.classList.remove('active');
                 if (li.dataset.page === page) {
@@ -717,7 +743,6 @@
                 }
             });
             
-            // Load page content
             switch(page) {
                 case 'dashboard':
                     loadDashboard();
@@ -750,62 +775,78 @@
 
         // ==================== DASHBOARD ====================
         async function loadDashboard() {
-            const result = await callApi('dashboard-stats');
-            if (result.success && result.data) {
-                const data = result.data;
-                const html = `
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <h3>💰 Penjualan Hari Ini</h3>
-                            <div class="value">Rp ${formatNumber(data.penjualan_hari_ini)}</div>
+            try {
+                const result = await callApi('dashboard-stats');
+                
+                if (result.success && result.data) {
+                    const data = result.data;
+                    const html = `
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <h3>💰 Penjualan Hari Ini</h3>
+                                <div class="value">Rp ${formatNumber(data.penjualan_hari_ini)}</div>
+                            </div>
+                            <div class="stat-card">
+                                <h3>📦 Total Stok Barang</h3>
+                                <div class="value">${formatNumber(data.total_stok)}</div>
+                            </div>
+                            <div class="stat-card">
+                                <h3>👥 Total Konsumen</h3>
+                                <div class="value">${formatNumber(data.total_konsumen)}</div>
+                            </div>
+                            <div class="stat-card">
+                                <h3>🏭 Total Supplier</h3>
+                                <div class="value">${formatNumber(data.total_supplier)}</div>
+                            </div>
+                            <div class="stat-card">
+                                <h3>📈 Penjualan Bulan Ini</h3>
+                                <div class="value">Rp ${formatNumber(data.penjualan_bulan_ini)}</div>
+                            </div>
+                            <div class="stat-card">
+                                <h3>🔄 Transaksi Hari Ini</h3>
+                                <div class="value">${formatNumber(data.jumlah_transaksi_hari_ini)}</div>
+                            </div>
                         </div>
                         <div class="stat-card">
-                            <h3>📦 Total Stok Barang</h3>
-                            <div class="value">${formatNumber(data.total_stok)}</div>
+                            <h3>🏆 Top 5 Konsumen (Poin Tertinggi)</h3>
+                            <div class="data-table">
+                                <table>
+                                    <thead>
+                                        <tr><th>Nama</th><th>Poin</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        ${data.top_konsumen && data.top_konsumen.length > 0 ? 
+                                            data.top_konsumen.map(k => `<tr><td>${k.nama}</td><td>${formatNumber(k.poin)}</td></tr>`).join('') : 
+                                            '<tr><td colspan="2">Belum ada data</td></tr>'
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
+                    `;
+                    document.getElementById('pageContent').innerHTML = html;
+                } else {
+                    document.getElementById('pageContent').innerHTML = `
                         <div class="stat-card">
-                            <h3>👥 Total Konsumen</h3>
-                            <div class="value">${formatNumber(data.total_konsumen)}</div>
+                            <h3>⚠️ Gagal Memuat Dashboard</h3>
+                            <p>Error: ${result.message || 'Unknown error'}</p>
+                            <button onclick="loadDashboard()" class="btn-sm" style="width: auto; margin-top: 10px;">🔄 Coba Lagi</button>
                         </div>
-                        <div class="stat-card">
-                            <h3>🏭 Total Supplier</h3>
-                            <div class="value">${formatNumber(data.total_supplier)}</div>
-                        </div>
-                        <div class="stat-card">
-                            <h3>📈 Penjualan Bulan Ini</h3>
-                            <div class="value">Rp ${formatNumber(data.penjualan_bulan_ini)}</div>
-                        </div>
-                        <div class="stat-card">
-                            <h3>🔄 Transaksi Hari Ini</h3>
-                            <div class="value">${formatNumber(data.jumlah_transaksi_hari_ini)}</div>
-                        </div>
-                    </div>
+                    `;
+                }
+            } catch (error) {
+                document.getElementById('pageContent').innerHTML = `
                     <div class="stat-card">
-                        <h3>🏆 Top 5 Konsumen (Poin Tertinggi)</h3>
-                        <div class="data-table">
-                            <table>
-                                <thead>
-                                    <tr><th>Nama</th><th>Poin</th></tr>
-                                </thead>
-                                <tbody>
-                                    ${data.top_konsumen && data.top_konsumen.length > 0 ? 
-                                        data.top_konsumen.map(k => `<tr><td>${k.nama}</td><td>${formatNumber(k.poin)}</td></tr>`).join('') : 
-                                        '<tr><td colspan="2">Belum ada data</td></tr>'
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
+                        <h3>⚠️ Gagal Memuat Dashboard</h3>
+                        <p>Error: ${error.message}</p>
+                        <button onclick="loadDashboard()" class="btn-sm" style="width: auto; margin-top: 10px;">🔄 Coba Lagi</button>
                     </div>
                 `;
-                document.getElementById('pageContent').innerHTML = html;
-            } else {
-                document.getElementById('pageContent').innerHTML = '<p>Gagal memuat dashboard</p>';
             }
         }
 
         // ==================== PENJUALAN ====================
         async function loadPenjualan() {
-            // Load products and customers
             const barangResult = await callApi('barang', { operation: 'read' });
             const konsumenResult = await callApi('konsumen', { operation: 'read' });
             
@@ -1088,8 +1129,6 @@
             `;
             document.getElementById('pageContent').innerHTML = html;
             updatePurchaseCartDisplay();
-            
-            // Store purchaseProducts for search
             window.purchaseProducts = purchaseProducts;
         }
 
@@ -1241,11 +1280,11 @@
                                     <td>Rp ${formatNumber(b.harga_jual)}</td>
                                     <td>${b.stok}</td>
                                     <td>
-                                        <button onclick="editBarang('${b.id}')" style="width: auto; padding: 5px 10px; margin-right:5px;">Edit</button>
-                                        <button onclick="deleteBarang('${b.id}')" class="btn-danger" style="width: auto; padding: 5px 10px;">Hapus</button>
+                                        <button onclick="editBarang('${b.id}')" style="width: auto; padding: 5px 10px; margin-right:5px;" class="btn-sm">Edit</button>
+                                        <button onclick="deleteBarang('${b.id}')" class="btn-danger btn-sm" style="width: auto; padding: 5px 10px;">Hapus</button>
                                     </td>
                                 </tr>
-                            `).join('') : '<tr><td colspan="8">Tidak ada data</td></tr>'}
+                            `).join('') : '<tr><td colspan="8">Tidak ada数据</td></tr>'}
                         </tbody>
                     </table>
                 </div>
@@ -1370,11 +1409,11 @@
                                     <td>${s.alamat || '-'}</td>
                                     <td>${s.email || '-'}</td>
                                     <td>
-                                        <button onclick="editSupplier('${s.id}')" style="width: auto; padding: 5px 10px; margin-right:5px;">Edit</button>
-                                        <button onclick="deleteSupplier('${s.id}')" class="btn-danger" style="width: auto; padding: 5px 10px;">Hapus</button>
+                                        <button onclick="editSupplier('${s.id}')" class="btn-sm" style="width: auto; padding: 5px 10px; margin-right:5px;">Edit</button>
+                                        <button onclick="deleteSupplier('${s.id}')" class="btn-danger btn-sm" style="width: auto; padding: 5px 10px;">Hapus</button>
                                     </td>
                                 </tr>
-                            `).join('') : '<tr><td colspan="6">Tidak ada data</td></tr>'}
+                            `).join('') : '<tr><td colspan="6">Tidak ada数据</td></tr>'}
                         </tbody>
                     </table>
                 </div>
@@ -1495,11 +1534,11 @@
                                     <td>${k.alamat || '-'}</td>
                                     <td>${k.poin || 0}</td>
                                     <td>
-                                        <button onclick="editKonsumen('${k.id}')" style="width: auto; padding: 5px 10px; margin-right:5px;">Edit</button>
-                                        <button onclick="deleteKonsumen('${k.id}')" class="btn-danger" style="width: auto; padding: 5px 10px;">Hapus</button>
+                                        <button onclick="editKonsumen('${k.id}')" class="btn-sm" style="width: auto; padding: 5px 10px; margin-right:5px;">Edit</button>
+                                        <button onclick="deleteKonsumen('${k.id}')" class="btn-danger btn-sm" style="width: auto; padding: 5px 10px;">Hapus</button>
                                     </td>
                                 </tr>
-                            `).join('') : '<tr><td colspan="7">Tidak ada data</td></tr>'}
+                            `).join('') : '<tr><td colspan="7">Tidak ada数据</td></tr>'}
                         </tbody>
                     </table>
                 </div>
@@ -1601,11 +1640,13 @@
         }
 
         // ==================== LAPORAN ====================
+        let activeReportTab = 'penjualan';
+
         async function loadLaporan() {
             const html = `
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <h3>Filter Laporan</h3>
+                <div class="stat-card">
+                    <h3>Filter Laporan</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                         <div class="form-group">
                             <label>Dari Tanggal</label>
                             <input type="date" id="laporanDari">
@@ -1614,12 +1655,27 @@
                             <label>Sampai Tanggal</label>
                             <input type="date" id="laporanSampai">
                         </div>
-                        <button onclick="loadLaporanPenjualan()" style="margin-bottom:10px;">📊 Tampilkan Laporan Penjualan</button>
+                    </div>
+                    
+                    <div class="report-tabs">
+                        <div class="report-tab ${activeReportTab === 'penjualan' ? 'active' : ''}" onclick="setReportTab('penjualan')">📊 Laporan Penjualan</div>
+                        <div class="report-tab ${activeReportTab === 'pembelian' ? 'active' : ''}" onclick="setReportTab('pembelian')">📦 Laporan Pembelian</div>
+                    </div>
+                    
+                    <div id="reportButtonContainer">
+                        ${activeReportTab === 'penjualan' ? 
+                            '<button onclick="loadLaporanPenjualan()" class="btn-success">📊 Tampilkan Laporan Penjualan</button>' : 
+                            '<button onclick="loadLaporanPembelian()" class="btn-success">📦 Tampilkan Laporan Pembelian</button>'}
                     </div>
                 </div>
                 <div id="laporanResult"></div>
             `;
             document.getElementById('pageContent').innerHTML = html;
+        }
+
+        function setReportTab(tab) {
+            activeReportTab = tab;
+            loadLaporan();
         }
 
         async function loadLaporanPenjualan() {
@@ -1630,11 +1686,22 @@
             
             if (result.success) {
                 const html = `
-                    <div class="stat-card" style="margin-top:20px;">
+                    <div class="stat-card" style="margin-top:20px; background: var(--primary); color: white;">
                         <h3>📊 Statistik Penjualan</h3>
-                        <p>Total: Rp ${formatNumber(result.statistik?.total || 0)}</p>
-                        <p>Jumlah Transaksi: ${formatNumber(result.statistik?.jumlah_transaksi || 0)}</p>
-                        <p>Rata-rata: Rp ${formatNumber(result.statistik?.rata_rata || 0)}</p>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 15px;">
+                            <div>
+                                <div style="font-size: 12px; opacity: 0.8;">Total Penjualan</div>
+                                <div style="font-size: 24px; font-weight: bold;">Rp ${formatNumber(result.statistik?.total || 0)}</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 12px; opacity: 0.8;">Jumlah Transaksi</div>
+                                <div style="font-size: 24px; font-weight: bold;">${formatNumber(result.statistik?.jumlah_transaksi || 0)}</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 12px; opacity: 0.8;">Rata-rata Transaksi</div>
+                                <div style="font-size: 24px; font-weight: bold;">Rp ${formatNumber(result.statistik?.rata_rata || 0)}</div>
+                            </div>
+                        </div>
                     </div>
                     <div class="data-table" style="margin-top:20px;">
                         <table>
@@ -1661,6 +1728,61 @@
                 document.getElementById('laporanResult').innerHTML = html;
             } else {
                 showToast(result.message, 'error');
+                document.getElementById('laporanResult').innerHTML = `<div class="stat-card">Gagal memuat laporan: ${result.message}</div>`;
+            }
+        }
+
+        async function loadLaporanPembelian() {
+            const dari = document.getElementById('laporanDari')?.value || '';
+            const sampai = document.getElementById('laporanSampai')?.value || '';
+            
+            const result = await callApi('laporan-pembelian', { dari, sampai });
+            
+            if (result.success) {
+                const html = `
+                    <div class="stat-card" style="margin-top:20px; background: var(--success); color: white;">
+                        <h3>📦 Statistik Pembelian</h3>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 15px;">
+                            <div>
+                                <div style="font-size: 12px; opacity: 0.8;">Total Pembelian</div>
+                                <div style="font-size: 24px; font-weight: bold;">Rp ${formatNumber(result.statistik?.total || 0)}</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 12px; opacity: 0.8;">Jumlah Transaksi</div>
+                                <div style="font-size: 24px; font-weight: bold;">${formatNumber(result.statistik?.jumlah_transaksi || 0)}</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 12px; opacity: 0.8;">Rata-rata Pembelian</div>
+                                <div style="font-size: 24px; font-weight: bold;">Rp ${formatNumber(result.statistik?.rata_rata || 0)}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="data-table" style="margin-top:20px;">
+                        <table>
+                            <thead>
+                                <tr><th>ID Pembelian</th><th>Tanggal</th><th>Supplier</th><th>Total Biaya</th><th>Status</th></tr>
+                            </thead>
+                            <tbody>
+                                ${result.data && result.data.length > 0 ? 
+                                    result.data.map(t => `
+                                        <tr>
+                                            <td>${t.id_pembelian}</td>
+                                            <td>${t.tgl_pembelian ? t.tgl_pembelian.split(' ')[0] : '-'}</td>
+                                            <td>${t.nama_supplier || t.id_supplier}</td>
+                                            <td>Rp ${formatNumber(t.total_biaya)}</td>
+                                            <td><span style="background: ${t.status_pembayaran === 'lunas' ? '#28a745' : '#ffc107'}; padding: 2px 8px; border-radius: 12px; font-size: 11px; color: ${t.status_pembayaran === 'lunas' ? 'white' : '#333'};">${t.status_pembayaran}</span></td>
+                                        </tr>
+                                    `).join('') : 
+                                    '<tr><td colspan="5">Tidak ada data</td></tr>'
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                document.getElementById('laporanResult').innerHTML = html;
+            } else {
+                showToast(result.message, 'error');
+                document.getElementById('laporanResult').innerHTML = `<div class="stat-card">Gagal memuat laporan: ${result.message}</div>`;
             }
         }
 

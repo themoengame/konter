@@ -171,6 +171,7 @@
         .sidebar-header p {
             font-size: 12px;
             opacity: 0.7;
+            margin-top: 5px;
         }
 
         .sidebar-menu {
@@ -230,6 +231,14 @@
             background: var(--danger);
             padding: 8px 16px;
             width: auto;
+        }
+
+        .role-badge {
+            background: var(--primary);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
         }
 
         /* Cards */
@@ -354,13 +363,6 @@
         }
 
         /* Cart Styles */
-        .cart-container {
-            background: var(--white);
-            border-radius: 12px;
-            padding: 20px;
-            margin-top: 20px;
-        }
-
         .cart-item {
             display: flex;
             justify-content: space-between;
@@ -471,6 +473,32 @@
             color: white;
         }
 
+        /* Welcome Card */
+        .welcome-card {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 30px;
+            border-radius: 16px;
+            margin-bottom: 20px;
+        }
+
+        .welcome-card h2 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .welcome-card p {
+            opacity: 0.9;
+        }
+
+        /* Quick Stats */
+        .quick-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .sidebar {
@@ -496,26 +524,6 @@
         .hidden {
             display: none;
         }
-
-        .loading-spinner {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid var(--light);
-            border-top: 3px solid var(--primary);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .text-danger { color: var(--danger); }
-        .text-success { color: var(--success); }
-        .text-warning { color: var(--warning); }
-        .text-primary { color: var(--primary); }
     </style>
 </head>
 <body>
@@ -537,7 +545,10 @@
                 <button type="submit">LOGIN</button>
             </form>
             <div style="margin-top: 20px; font-size: 12px; color: var(--gray);">
-                Demo: admin@counter.com / admin123
+                Demo: admin@counter.com / admin123<br>
+                Kasir: kasir1@counter.com / kasir123<br>
+                Gudang: gudang@counter.com / gudang123<br>
+                Owner: owner@counter.com / owner123
             </div>
         </div>
     </div>
@@ -549,51 +560,17 @@
                 <h3>📱 Counter HP</h3>
                 <p id="sidebarRole"></p>
             </div>
-            <ul class="sidebar-menu">
-                <li data-page="dashboard">
-                    <span>📊</span>
-                    <span>Dashboard</span>
-                </li>
-                <li data-page="penjualan">
-                    <span>💰</span>
-                    <span>Penjualan</span>
-                </li>
-                <li data-page="pembelian">
-                    <span>📦</span>
-                    <span>Pembelian</span>
-                </li>
-                <li data-page="barang">
-                    <span>📱</span>
-                    <span>Barang</span>
-                </li>
-                <li data-page="supplier">
-                    <span>🏭</span>
-                    <span>Supplier</span>
-                </li>
-                <li data-page="konsumen">
-                    <span>👥</span>
-                    <span>Konsumen</span>
-                </li>
-                <li data-page="laporan">
-                    <span>📄</span>
-                    <span>Laporan</span>
-                </li>
-                <li data-page="profil">
-                    <span>🏪</span>
-                    <span>Profil Toko</span>
-                </li>
-                <li data-page="logout">
-                    <span>🚪</span>
-                    <span>Logout</span>
-                </li>
+            <ul class="sidebar-menu" id="sidebarMenu">
+                <!-- Menu akan di-generate berdasarkan role -->
             </ul>
         </div>
 
         <div class="main-content">
             <div class="top-bar">
-                <div class="page-title" id="pageTitle">Dashboard</div>
+                <div class="page-title" id="pageTitle">Penjualan</div>
                 <div class="user-info">
                     <span id="userName"></span>
+                    <span class="role-badge" id="userRoleBadge"></span>
                     <button class="btn-logout" onclick="logout()">Logout</button>
                 </div>
             </div>
@@ -601,13 +578,11 @@
         </div>
     </div>
 
+    <script src="config.js"></script>
     <script>
-        // ==================== KONFIGURASI ====================
-        const BASE_URL = 'https://script.google.com/macros/s/AKfycbwYd-keZ4UidqbCUaDU5NGfMg3UgjJ0AZRoj4Ps0_P3qlhc2qHF_lk3jBm_jIRx9-nm/exec';
-        
         // ==================== GLOBAL VARIABLES ====================
         let currentUser = null;
-        let currentPage = 'dashboard';
+        let currentPage = 'penjualan';
         
         // Cart for transaction
         let cart = [];
@@ -651,7 +626,7 @@
             }
         }
 
-        async function loadConfig() {
+        async function loadConfigData() {
             const result = await callApi('konfigurasi', { operation: 'read' });
             if (result.success && result.data) {
                 return result.data;
@@ -660,9 +635,42 @@
         }
 
         async function updateLoginDisplay() {
-            const config = await loadConfig();
+            const config = await loadConfigData();
             document.getElementById('loginNamaToko').textContent = config.nama_toko || 'Counter HP Management';
             document.getElementById('loginAlamatToko').textContent = config.alamat || 'Jl. Raya No. 123, Jakarta';
+        }
+
+        // ==================== MENU GENERATION ====================
+        function generateSidebarMenu() {
+            const allowedMenus = ROLE_MENU[currentUser.role] || ROLE_MENU.kasir;
+            const menuContainer = document.getElementById('sidebarMenu');
+            
+            menuContainer.innerHTML = allowedMenus.map(menu => `
+                <li data-page="${menu}">
+                    <span>${MENU_NAMES[menu]?.icon || '📄'}</span>
+                    <span>${MENU_NAMES[menu]?.name || menu}</span>
+                </li>
+            `).join('');
+            
+            // Add logout at the bottom
+            menuContainer.innerHTML += `
+                <li data-page="logout" style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <span>🚪</span>
+                    <span>Logout</span>
+                </li>
+            `;
+            
+            // Add event listeners
+            document.querySelectorAll('.sidebar-menu li').forEach(li => {
+                li.addEventListener('click', () => {
+                    const page = li.dataset.page;
+                    if (page === 'logout') {
+                        logout();
+                    } else if (page) {
+                        loadPage(page);
+                    }
+                });
+            });
         }
 
         // ==================== AUTHENTICATION ====================
@@ -685,11 +693,18 @@
                     nama: result.nama
                 };
                 localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                
                 document.getElementById('loginPage').style.display = 'none';
                 document.getElementById('appContainer').classList.add('active');
-                document.getElementById('sidebarRole').textContent = result.role.toUpperCase();
-                document.getElementById('userName').textContent = result.nama;
-                loadPage('dashboard');
+                document.getElementById('sidebarRole').textContent = currentUser.role.toUpperCase();
+                document.getElementById('userName').textContent = currentUser.nama;
+                document.getElementById('userRoleBadge').textContent = currentUser.role.toUpperCase();
+                
+                generateSidebarMenu();
+                
+                // Load first allowed page
+                const firstPage = ROLE_MENU[currentUser.role][0];
+                loadPage(firstPage || 'penjualan');
                 showToast('Login berhasil! Selamat datang ' + result.nama);
             } else {
                 showToast(result.message, 'error');
@@ -704,7 +719,11 @@
                 document.getElementById('appContainer').classList.add('active');
                 document.getElementById('sidebarRole').textContent = currentUser.role.toUpperCase();
                 document.getElementById('userName').textContent = currentUser.nama;
-                loadPage('dashboard');
+                document.getElementById('userRoleBadge').textContent = currentUser.role.toUpperCase();
+                generateSidebarMenu();
+                
+                const firstPage = ROLE_MENU[currentUser.role][0];
+                loadPage(firstPage || 'penjualan');
             } else {
                 updateLoginDisplay();
             }
@@ -724,18 +743,9 @@
         // ==================== PAGE LOADER ====================
         function loadPage(page) {
             currentPage = page;
-            const titles = {
-                dashboard: '📊 Dashboard',
-                penjualan: '💰 Transaksi Penjualan',
-                pembelian: '📦 Transaksi Pembelian',
-                barang: '📱 Master Barang',
-                supplier: '🏭 Master Supplier',
-                konsumen: '👥 Master Konsumen',
-                laporan: '📄 Laporan',
-                profil: '🏪 Profil Toko'
-            };
-            document.getElementById('pageTitle').textContent = titles[page] || 'Dashboard';
+            document.getElementById('pageTitle').textContent = PAGE_TITLES[page] || page;
             
+            // Update active menu
             document.querySelectorAll('.sidebar-menu li').forEach(li => {
                 li.classList.remove('active');
                 if (li.dataset.page === page) {
@@ -743,10 +753,8 @@
                 }
             });
             
+            // Load page content
             switch(page) {
-                case 'dashboard':
-                    loadDashboard();
-                    break;
                 case 'penjualan':
                     loadPenjualan();
                     break;
@@ -769,79 +777,7 @@
                     loadProfil();
                     break;
                 default:
-                    loadDashboard();
-            }
-        }
-
-        // ==================== DASHBOARD ====================
-        async function loadDashboard() {
-            try {
-                const result = await callApi('dashboard-stats');
-                
-                if (result.success && result.data) {
-                    const data = result.data;
-                    const html = `
-                        <div class="stats-grid">
-                            <div class="stat-card">
-                                <h3>💰 Penjualan Hari Ini</h3>
-                                <div class="value">Rp ${formatNumber(data.penjualan_hari_ini)}</div>
-                            </div>
-                            <div class="stat-card">
-                                <h3>📦 Total Stok Barang</h3>
-                                <div class="value">${formatNumber(data.total_stok)}</div>
-                            </div>
-                            <div class="stat-card">
-                                <h3>👥 Total Konsumen</h3>
-                                <div class="value">${formatNumber(data.total_konsumen)}</div>
-                            </div>
-                            <div class="stat-card">
-                                <h3>🏭 Total Supplier</h3>
-                                <div class="value">${formatNumber(data.total_supplier)}</div>
-                            </div>
-                            <div class="stat-card">
-                                <h3>📈 Penjualan Bulan Ini</h3>
-                                <div class="value">Rp ${formatNumber(data.penjualan_bulan_ini)}</div>
-                            </div>
-                            <div class="stat-card">
-                                <h3>🔄 Transaksi Hari Ini</h3>
-                                <div class="value">${formatNumber(data.jumlah_transaksi_hari_ini)}</div>
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <h3>🏆 Top 5 Konsumen (Poin Tertinggi)</h3>
-                            <div class="data-table">
-                                <table>
-                                    <thead>
-                                        <tr><th>Nama</th><th>Poin</th></tr>
-                                    </thead>
-                                    <tbody>
-                                        ${data.top_konsumen && data.top_konsumen.length > 0 ? 
-                                            data.top_konsumen.map(k => `<tr><td>${k.nama}</td><td>${formatNumber(k.poin)}</td></tr>`).join('') : 
-                                            '<tr><td colspan="2">Belum ada data</td></tr>'
-                                        }
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    `;
-                    document.getElementById('pageContent').innerHTML = html;
-                } else {
-                    document.getElementById('pageContent').innerHTML = `
-                        <div class="stat-card">
-                            <h3>⚠️ Gagal Memuat Dashboard</h3>
-                            <p>Error: ${result.message || 'Unknown error'}</p>
-                            <button onclick="loadDashboard()" class="btn-sm" style="width: auto; margin-top: 10px;">🔄 Coba Lagi</button>
-                        </div>
-                    `;
-                }
-            } catch (error) {
-                document.getElementById('pageContent').innerHTML = `
-                    <div class="stat-card">
-                        <h3>⚠️ Gagal Memuat Dashboard</h3>
-                        <p>Error: ${error.message}</p>
-                        <button onclick="loadDashboard()" class="btn-sm" style="width: auto; margin-top: 10px;">🔄 Coba Lagi</button>
-                    </div>
-                `;
+                    loadPenjualan();
             }
         }
 
@@ -1074,7 +1010,7 @@
             }
         }
 
-        // ==================== PEMBELIAN (RESTOCK) ====================
+        // ==================== PEMBELIAN (RESTOCK) - KHUSUS GUDANG ====================
         async function loadPembelian() {
             const barangResult = await callApi('barang', { operation: 'read' });
             const supplierResult = await callApi('supplier', { operation: 'read' });
@@ -1280,7 +1216,7 @@
                                     <td>Rp ${formatNumber(b.harga_jual)}</td>
                                     <td>${b.stok}</td>
                                     <td>
-                                        <button onclick="editBarang('${b.id}')" style="width: auto; padding: 5px 10px; margin-right:5px;" class="btn-sm">Edit</button>
+                                        <button onclick="editBarang('${b.id}')" class="btn-sm" style="width: auto; padding: 5px 10px; margin-right:5px;">Edit</button>
                                         <button onclick="deleteBarang('${b.id}')" class="btn-danger btn-sm" style="width: auto; padding: 5px 10px;">Hapus</button>
                                     </td>
                                 </tr>
@@ -1719,7 +1655,7 @@
                                             <td>${t.metode_pembayaran}</td>
                                         </tr>
                                     `).join('') : 
-                                    '<tr><td colspan="5">Tidak ada data</td></tr>'
+                                    '<tr><td colspan="5">Tidak ada数据</td></tr>'
                                 }
                             </tbody>
                         </table>
@@ -1773,7 +1709,7 @@
                                             <td><span style="background: ${t.status_pembayaran === 'lunas' ? '#28a745' : '#ffc107'}; padding: 2px 8px; border-radius: 12px; font-size: 11px; color: ${t.status_pembayaran === 'lunas' ? 'white' : '#333'};">${t.status_pembayaran}</span></td>
                                         </tr>
                                     `).join('') : 
-                                    '<tr><td colspan="5">Tidak ada data</td></tr>'
+                                    '<tr><td colspan="5">Tidak ada数据</td></tr>'
                                 }
                             </tbody>
                         </table>
@@ -1788,7 +1724,7 @@
 
         // ==================== PROFIL TOKO ====================
         async function loadProfil() {
-            const config = await loadConfig();
+            const config = await loadConfigData();
             const html = `
                 <div class="stat-card">
                     <h3>🏪 Profil Toko</h3>
@@ -1853,18 +1789,6 @@
 
         // ==================== INITIALIZATION ====================
         document.getElementById('loginForm').addEventListener('submit', handleLogin);
-        
-        document.querySelectorAll('.sidebar-menu li').forEach(li => {
-            li.addEventListener('click', () => {
-                const page = li.dataset.page;
-                if (page === 'logout') {
-                    logout();
-                } else if (page) {
-                    loadPage(page);
-                }
-            });
-        });
-        
         checkSession();
     </script>
 </body>

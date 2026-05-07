@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Master Supplier</title>
+</head>
+<body>
+    <div class="master-container">
+        <div class="section-header">
+            <h3>🏭 Master Supplier</h3>
+            <button class="btn-primary" onclick="showAddSupplierModal()">+ Tambah Supplier</button>
+        </div>
+        
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nama Supplier</th>
+                        <th>Kontak</th>
+                        <th>Alamat</th>
+                        <th>Email</th>
+                        <th>Catatan</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="supplierTableBody">
+                    <tr><td colspan="7" style="text-align:center">Memuat data...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let supplierData = [];
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadSupplier();
+        });
+        
+        async function loadSupplier() {
+            try {
+                supplierData = await getAllMaster('supplier');
+                renderSupplierTable();
+            } catch (error) {
+                console.error('Error loading supplier:', error);
+                document.getElementById('supplierTableBody').innerHTML = '<tr><td colspan="7" style="text-align:center">Gagal memuat data</td></tr>';
+            }
+        }
+        
+        function renderSupplierTable() {
+            const tbody = document.getElementById('supplierTableBody');
+            if (supplierData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center">Tidak ada data</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = supplierData.map(item => `
+                <tr>
+                    <td>${item.id || '-'}</td>
+                    <td>${escapeHtml(item.nama_supplier) || '-'}</td>
+                    <td>${item.kontak || '-'}</td>
+                    <td>${escapeHtml(item.alamat) || '-'}</td>
+                    <td>${item.email || '-'}</td>
+                    <td>${escapeHtml(item.catatan) || '-'}</td>
+                    <td class="actions">
+                        <button class="btn-edit" onclick="editSupplier('${item.id}')">Edit</button>
+                        <button class="btn-delete" onclick="deleteSupplier('${item.id}')">Hapus</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        function showAddSupplierModal() {
+            const modal = document.getElementById('globalModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalBody = document.getElementById('modalBody');
+            
+            modalTitle.textContent = 'Tambah Supplier';
+            modalBody.innerHTML = `
+                <form id="supplierForm">
+                    <div class="form-group">
+                        <label>Nama Supplier *</label>
+                        <input type="text" name="nama_supplier" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Kontak *</label>
+                        <input type="text" name="kontak" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Alamat</label>
+                        <textarea name="alamat" rows="2"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" name="email">
+                    </div>
+                    <div class="form-group">
+                        <label>Catatan</label>
+                        <textarea name="catatan" rows="2"></textarea>
+                    </div>
+                </form>
+            `;
+            
+            const saveBtn = modal.querySelector('.modal-save');
+            saveBtn.onclick = async () => {
+                const form = document.getElementById('supplierForm');
+                const formData = new FormData(form);
+                const data = {};
+                formData.forEach((value, key) => { data[key] = value; });
+                
+                try {
+                    showLoading(true);
+                    await createMaster('supplier', data);
+                    showToast('Supplier berhasil ditambahkan', 'success');
+                    closeModal();
+                    await loadSupplier();
+                } catch (error) {
+                    showToast(error.message, 'error');
+                } finally {
+                    showLoading(false);
+                }
+            };
+            
+            modal.style.display = 'flex';
+        }
+        
+        async function editSupplier(id) {
+            const item = supplierData.find(s => s.id === id);
+            if (!item) return;
+            
+            const modal = document.getElementById('globalModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalBody = document.getElementById('modalBody');
+            
+            modalTitle.textContent = 'Edit Supplier';
+            modalBody.innerHTML = `
+                <form id="supplierForm">
+                    <div class="form-group">
+                        <label>Nama Supplier</label>
+                        <input type="text" name="nama_supplier" value="${escapeHtml(item.nama_supplier || '')}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Kontak</label>
+                        <input type="text" name="kontak" value="${item.kontak || ''}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Alamat</label>
+                        <textarea name="alamat" rows="2">${escapeHtml(item.alamat || '')}</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" name="email" value="${item.email || ''}">
+                    </div>
+                    <div class="form-group">
+                        <label>Catatan</label>
+                        <textarea name="catatan" rows="2">${escapeHtml(item.catatan || '')}</textarea>
+                    </div>
+                </form>
+            `;
+            
+            const saveBtn = modal.querySelector('.modal-save');
+            saveBtn.onclick = async () => {
+                const form = document.getElementById('supplierForm');
+                const formData = new FormData(form);
+                const data = {};
+                formData.forEach((value, key) => { data[key] = value; });
+                
+                try {
+                    showLoading(true);
+                    await updateMaster('supplier', id, data);
+                    showToast('Supplier berhasil diupdate', 'success');
+                    closeModal();
+                    await loadSupplier();
+                } catch (error) {
+                    showToast(error.message, 'error');
+                } finally {
+                    showLoading(false);
+                }
+            };
+            
+            modal.style.display = 'flex';
+        }
+        
+        async function deleteSupplier(id) {
+            const confirmed = await confirmAction('Yakin hapus supplier ini?');
+            if (!confirmed) return;
+            
+            try {
+                showLoading(true);
+                await deleteMaster('supplier', id);
+                showToast('Supplier berhasil dihapus', 'success');
+                await loadSupplier();
+            } catch (error) {
+                showToast(error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        window.showAddSupplierModal = showAddSupplierModal;
+        window.editSupplier = editSupplier;
+        window.deleteSupplier = deleteSupplier;
+    </script>
+</body>
+</html>

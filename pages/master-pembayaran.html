@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Master Pembayaran Online</title>
+</head>
+<body>
+    <div class="master-container">
+        <div class="section-header">
+            <h3>💳 Master Pembayaran Online</h3>
+            <button class="btn-primary" onclick="showAddPembayaranModal()">+ Tambah Pembayaran</button>
+        </div>
+        
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>ID Barang</th>
+                        <th>Provider</th>
+                        <th>Jenis Layanan</th>
+                        <th>Fee Beli</th>
+                        <th>Fee Jual</th>
+                        <th>Stok Deposit</th>
+                        <th>Status</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="pembayaranTableBody">
+                    <tr><td colspan="9" style="text-align:center">Memuat data...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let pembayaranData = [];
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadPembayaran();
+        });
+        
+        async function loadPembayaran() {
+            try {
+                pembayaranData = await getAllMaster('pembayaran');
+                renderPembayaranTable();
+            } catch (error) {
+                console.error('Error loading pembayaran:', error);
+                document.getElementById('pembayaranTableBody').innerHTML = '<tr><td colspan="9" style="text-align:center">Gagal memuat数据</tr></table>';
+            }
+        }
+        
+        function renderPembayaranTable() {
+            const tbody = document.getElementById('pembayaranTableBody');
+            if (pembayaranData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center">Tidak ada数据</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = pembayaranData.map(item => `
+                <tr>
+                    <td>${item.id || '-'}</td>
+                    <td>${item.id_barang || '-'}</td>
+                    <td>${item.provider || '-'}</td>
+                    <td>${item.jenis_layanan || '-'}</td>
+                    <td>${formatRupiah(item.fee_beli)}</td>
+                    <td>${formatRupiah(item.fee_jual)}</td>
+                    <td>${item.stok_deposit || 0}</td>
+                    <td><span class="status-badge ${item.status === 'aktif' ? 'status-active' : 'status-inactive'}">${item.status || 'aktif'}</span></td>
+                    <td class="actions">
+                        <button class="btn-edit" onclick="editPembayaran('${item.id}')">Edit</button>
+                        <button class="btn-delete" onclick="deletePembayaran('${item.id}')">Hapus</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        function showAddPembayaranModal() {
+            const modal = document.getElementById('globalModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalBody = document.getElementById('modalBody');
+            
+            modalTitle.textContent = 'Tambah Pembayaran Online';
+            modalBody.innerHTML = `
+                <form id="pembayaranForm">
+                    <div class="form-group">
+                        <label>ID Barang (Relasi ke master barang) *</label>
+                        <input type="text" name="id_barang" required placeholder="B001">
+                    </div>
+                    <div class="form-group">
+                        <label>Provider *</label>
+                        <input type="text" name="provider" required placeholder="OVO, Dana, LinkAja, ShopeePay, QRIS">
+                    </div>
+                    <div class="form-group">
+                        <label>Jenis Layanan *</label>
+                        <input type="text" name="jenis_layanan" required placeholder="Topup, Pembayaran, QRIS">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Fee Beli *</label>
+                            <input type="number" name="fee_beli" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Fee Jual *</label>
+                            <input type="number" name="fee_jual" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Stok Deposit</label>
+                            <input type="number" name="stok_deposit" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Status</label>
+                            <select name="status">
+                                <option value="aktif">Aktif</option>
+                                <option value="nonaktif">Nonaktif</option>
+                            </select>
+                        </div>
+                    </div>
+                </form>
+            `;
+            
+            const saveBtn = modal.querySelector('.modal-save');
+            saveBtn.onclick = async () => {
+                const form = document.getElementById('pembayaranForm');
+                const formData = new FormData(form);
+                const data = {};
+                formData.forEach((value, key) => { data[key] = value; });
+                
+                try {
+                    showLoading(true);
+                    await createMaster('pembayaran', data);
+                    showToast('Pembayaran online berhasil ditambahkan', 'success');
+                    closeModal();
+                    await loadPembayaran();
+                } catch (error) {
+                    showToast(error.message, 'error');
+                } finally {
+                    showLoading(false);
+                }
+            };
+            
+            modal.style.display = 'flex';
+        }
+        
+        async function editPembayaran(id) {
+            const item = pembayaranData.find(p => p.id === id);
+            if (!item) return;
+            
+            const modal = document.getElementById('globalModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalBody = document.getElementById('modalBody');
+            
+            modalTitle.textContent = 'Edit Pembayaran Online';
+            modalBody.innerHTML = `
+                <form id="pembayaranForm">
+                    <div class="form-group">
+                        <label>ID Barang</label>
+                        <input type="text" name="id_barang" value="${item.id_barang || ''}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Provider</label>
+                        <input type="text" name="provider" value="${item.provider || ''}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Jenis Layanan</label>
+                        <input type="text" name="jenis_layanan" value="${item.jenis_layanan || ''}" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Fee Beli</label>
+                            <input type="number" name="fee_beli" value="${item.fee_beli || 0}" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Fee Jual</label>
+                            <input type="number" name="fee_jual" value="${item.fee_jual || 0}" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Stok Deposit</label>
+                            <input type="number" name="stok_deposit" value="${item.stok_deposit || 0}">
+                        </div>
+                        <div class="form-group">
+                            <label>Status</label>
+                            <select name="status">
+                                <option value="aktif" ${item.status === 'aktif' ? 'selected' : ''}>Aktif</option>
+                                <option value="nonaktif" ${item.status === 'nonaktif' ? 'selected' : ''}>Nonaktif</option>
+                            </select>
+                        </div>
+                    </div>
+                </form>
+            `;
+            
+            const saveBtn = modal.querySelector('.modal-save');
+            saveBtn.onclick = async () => {
+                const form = document.getElementById('pembayaranForm');
+                const formData = new FormData(form);
+                const data = {};
+                formData.forEach((value, key) => { data[key] = value; });
+                
+                try {
+                    showLoading(true);
+                    await updateMaster('pembayaran', id, data);
+                    showToast('Pembayaran online berhasil diupdate', 'success');
+                    closeModal();
+                    await loadPembayaran();
+                } catch (error) {
+                    showToast(error.message, 'error');
+                } finally {
+                    showLoading(false);
+                }
+            };
+            
+            modal.style.display = 'flex';
+        }
+        
+        async function deletePembayaran(id) {
+            const confirmed = await confirmAction('Yakin hapus pembayaran ini?');
+            if (!confirmed) return;
+            
+            try {
+                showLoading(true);
+                await deleteMaster('pembayaran', id);
+                showToast('Pembayaran online berhasil dihapus', 'success');
+                await loadPembayaran();
+            } catch (error) {
+                showToast(error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        window.showAddPembayaranModal = showAddPembayaranModal;
+        window.editPembayaran = editPembayaran;
+        window.deletePembayaran = deletePembayaran;
+    </script>
+</body>
+</html>

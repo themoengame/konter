@@ -107,3 +107,17 @@ async function getLaporanServis(dari, sampai) {
 async function savePembelian(data) {
     return await postData('transaksi-pembelian', 'create', data);
 }
+
+// ==================== KONFIGURASI TOKO ====================
+
+// Ambil semua konfigurasi atau berdasarkan key
+async function getKonfigurasi(key = null) {
+  const params = key ? { key: key } : {};
+  const result = await getData('konfigurasi', 'read', params);
+  return result.data || {};
+}
+
+// Update konfigurasi
+async function updateKonfigurasi(key, value, description = '') {
+  return await postData('konfigurasi', 'update', { key, value, description });
+}

@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Master Servis</title>
+</head>
+<body>
+    <div class="master-container">
+        <div class="section-header">
+            <h3>🔧 Master Jasa Servis</h3>
+            <button class="btn-primary" onclick="showAddServisModal()">+ Tambah Servis</button>
+        </div>
+        
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nama Servis</th>
+                        <th>Kategori</th>
+                        <th>Biaya Jasa</th>
+                        <th>Estimasi Hari</th>
+                        <th>Garansi Hari</th>
+                        <th>ID Part Default</th>
+                        <th>Status</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="servisTableBody">
+                    <tr><td colspan="9" style="text-align:center">Memuat data...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let servisData = [];
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadServis();
+        });
+        
+        async function loadServis() {
+            try {
+                servisData = await getAllMaster('servis');
+                renderServisTable();
+            } catch (error) {
+                console.error('Error loading servis:', error);
+                document.getElementById('servisTableBody').innerHTML = '<tr><td colspan="9" style="text-align:center">Gagal memuat数据</td></tr>';
+            }
+        }
+        
+        function renderServisTable() {
+            const tbody = document.getElementById('servisTableBody');
+            if (servisData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center">Tidak ada数据</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = servisData.map(item => `
+                <tr>
+                    <td>${item.id || '-'}</td>
+                    <td>${escapeHtml(item.nama_servis) || '-'}</td>
+                    <td>${item.kategori || '-'}</td>
+                    <td>${formatRupiah(item.biaya_jasa)}</td>
+                    <td>${item.estimasi_hari || 0} hari</td>
+                    <td>${item.garansi_hari || 0} hari</td>
+                    <td>${item.id_part_default || '-'}</td>
+                    <td><span class="status-badge ${item.status === 'aktif' ? 'status-active' : 'status-inactive'}">${item.status || 'aktif'}</span></td>
+                    <td class="actions">
+                        <button class="btn-edit" onclick="editServis('${item.id}')">Edit</button>
+                        <button class="btn-delete" onclick="deleteServis('${item.id}')">Hapus</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        function showAddServisModal() {
+            const modal = document.getElementById('globalModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalBody = document.getElementById('modalBody');
+            
+            modalTitle.textContent = 'Tambah Jasa Servis';
+            modalBody.innerHTML = `
+                <form id="servisForm">
+                    <div class="form-group">
+                        <label>Nama Servis *</label>
+                        <input type="text" name="nama_servis" required placeholder="Ganti LCD, Flashing, dll">
+                    </div>
+                    <div class="form-group">
+                        <label>Kategori *</label>
+                        <select name="kategori" required>
+                            <option value="">Pilih</option>
+                            <option value="Hardware">Hardware</option>
+                            <option value="Software">Software</option>
+                            <option value="Lainnya">Lainnya</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Biaya Jasa *</label>
+                            <input type="number" name="biaya_jasa" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Estimasi Hari *</label>
+                            <input type="number" name="estimasi_hari" step="0.5" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Garansi Hari</label>
+                            <input type="number" name="garansi_hari" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label>ID Part Default</label>
+                            <input type="text" name="id_part_default" placeholder="B001 (opsional)">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select name="status">
+                            <option value="aktif">Aktif</option>
+                            <option value="nonaktif">Nonaktif</option>
+                        </select>
+                    </div>
+                </form>
+            `;
+            
+            const saveBtn = modal.querySelector('.modal-save');
+            saveBtn.onclick = async () => {
+                const form = document.getElementById('servisForm');
+                const formData = new FormData(form);
+                const data = {};
+                formData.forEach((value, key) => { data[key] = value; });
+                
+                try {
+                    showLoading(true);
+                    await createMaster('servis', data);
+                    showToast('Servis berhasil ditambahkan', 'success');
+                    closeModal();
+                    await loadServis();
+                } catch (error) {
+                    showToast(error.message, 'error');
+                } finally {
+                    showLoading(false);
+                }
+            };
+            
+            modal.style.display = 'flex';
+        }
+        
+        async function editServis(id) {
+            const item = servisData.find(s => s.id === id);
+            if (!item) return;
+            
+            const modal = document.getElementById('globalModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalBody = document.getElementById('modalBody');
+            
+            modalTitle.textContent = 'Edit Jasa Servis';
+            modalBody.innerHTML = `
+                <form id="servisForm">
+                    <div class="form-group">
+                        <label>Nama Servis</label>
+                        <input type="text" name="nama_servis" value="${escapeHtml(item.nama_servis || '')}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Kategori</label>
+                        <select name="kategori" required>
+                            <option value="">Pilih</option>
+                            <option value="Hardware" ${item.kategori === 'Hardware' ? 'selected' : ''}>Hardware</option>
+                            <option value="Software" ${item.kategori === 'Software' ? 'selected' : ''}>Software</option>
+                            <option value="Lainnya" ${item.kategori === 'Lainnya' ? 'selected' : ''}>Lainnya</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Biaya Jasa</label>
+                            <input type="number" name="biaya_jasa" value="${item.biaya_jasa || 0}" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Estimasi Hari</label>
+                            <input type="number" name="estimasi_hari" step="0.5" value="${item.estimasi_hari || 0}" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Garansi Hari</label>
+                            <input type="number" name="garansi_hari" value="${item.garansi_hari || 0}">
+                        </div>
+                        <div class="form-group">
+                            <label>ID Part Default</label>
+                            <input type="text" name="id_part_default" value="${item.id_part_default || ''}">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select name="status">
+                            <option value="aktif" ${item.status === 'aktif' ? 'selected' : ''}>Aktif</option>
+                            <option value="nonaktif" ${item.status === 'nonaktif' ? 'selected' : ''}>Nonaktif</option>
+                        </select>
+                    </div>
+                </form>
+            `;
+            
+            const saveBtn = modal.querySelector('.modal-save');
+            saveBtn.onclick = async () => {
+                const form = document.getElementById('servisForm');
+                const formData = new FormData(form);
+                const data = {};
+                formData.forEach((value, key) => { data[key] = value; });
+                
+                try {
+                    showLoading(true);
+                    await updateMaster('servis', id, data);
+                    showToast('Servis berhasil diupdate', 'success');
+                    closeModal();
+                    await loadServis();
+                } catch (error) {
+                    showToast(error.message, 'error');
+                } finally {
+                    showLoading(false);
+                }
+            };
+            
+            modal.style.display = 'flex';
+        }
+        
+        async function deleteServis(id) {
+            const confirmed = await confirmAction('Yakin hapus servis ini?');
+            if (!confirmed) return;
+            
+            try {
+                showLoading(true);
+                await deleteMaster('servis', id);
+                showToast('Servis berhasil dihapus', 'success');
+                await loadServis();
+            } catch (error) {
+                showToast(error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        window.showAddServisModal = showAddServisModal;
+        window.editServis = editServis;
+        window.deleteServis = deleteServis;
+    </script>
+</body>
+</html>

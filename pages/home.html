@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard Home</title>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="dashboard-grid" id="statsGrid">
+            <div class="stat-card">
+                <h3>💰 Penjualan Hari Ini</h3>
+                <p class="stat-value" id="statPenjualanHariIni">Rp 0</p>
+            </div>
+            <div class="stat-card">
+                <h3>📦 Total Stok Barang</h3>
+                <p class="stat-value" id="statTotalStok">0</p>
+            </div>
+            <div class="stat-card">
+                <h3>👥 Total Konsumen</h3>
+                <p class="stat-value" id="statTotalKonsumen">0</p>
+            </div>
+            <div class="stat-card">
+                <h3>🏭 Total Supplier</h3>
+                <p class="stat-value" id="statTotalSupplier">0</p>
+            </div>
+        </div>
+        
+        <div class="welcome-card">
+            <h3>Selamat Datang di Sistem Counter HP</h3>
+            <p>Sistem ini mendukung penjualan:</p>
+            <div class="feature-list">
+                <span class="feature-tag">📱 Handphone</span>
+                <span class="feature-tag">🎧 Aksesoris</span>
+                <span class="feature-tag">📡 Pulsa & Token</span>
+                <span class="feature-tag">💳 Pembayaran Online</span>
+                <span class="feature-tag">🔧 Servis HP</span>
+            </div>
+            <p style="margin-top: 15px; color: var(--gray);">
+                Gunakan menu di samping untuk mengelola data dan melakukan transaksi.
+            </p>
+        </div>
+        
+        <div class="info-cards">
+            <div class="info-card">
+                <div class="info-icon">📈</div>
+                <div class="info-content">
+                    <h4>Penjualan Bulan Ini</h4>
+                    <p id="statPenjualanBulanIni">Loading...</p>
+                </div>
+            </div>
+            <div class="info-card">
+                <div class="info-icon">🔄</div>
+                <div class="info-content">
+                    <h4>Transaksi Hari Ini</h4>
+                    <p id="statJumlahTransaksi">0</p>
+                </div>
+            </div>
+            <div class="info-card">
+                <div class="info-icon">⭐</div>
+                <div class="info-content">
+                    <h4>Konsumen dengan Poin Tertinggi</h4>
+                    <p id="statTopKonsumen">-</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .dashboard-container {
+            padding: 0;
+        }
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: var(--white);
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: var(--shadow);
+            text-align: center;
+        }
+        .stat-card h3 {
+            font-size: 14px;
+            color: var(--gray);
+            margin-bottom: 8px;
+        }
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        .welcome-card {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            border-radius: var(--radius-lg);
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        .welcome-card h3 {
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+        .feature-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .feature-tag {
+            background: rgba(255,255,255,0.2);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+        }
+        .info-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        .info-card {
+            background: var(--white);
+            border-radius: var(--radius);
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: var(--shadow);
+        }
+        .info-icon {
+            font-size: 40px;
+        }
+        .info-content h4 {
+            font-size: 14px;
+            color: var(--gray);
+            margin-bottom: 5px;
+        }
+        .info-content p {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            .info-cards {
+                grid-template-columns: 1fr;
+            }
+            .welcome-card {
+                padding: 20px;
+            }
+            .welcome-card h3 {
+                font-size: 20px;
+            }
+        }
+    </style>
+
+    <script>
+        // Load dashboard data ketika halaman dimuat
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadDashboardStats();
+            await loadAdditionalStats();
+        });
+        
+        async function loadDashboardStats() {
+            try {
+                const stats = await getDashboardStats();
+                if (stats) {
+                    document.getElementById('statPenjualanHariIni').textContent = formatRupiah(stats.penjualan_hari_ini || 0);
+                    document.getElementById('statTotalStok').textContent = formatNumber(stats.total_stok || 0);
+                    document.getElementById('statTotalKonsumen').textContent = formatNumber(stats.total_konsumen || 0);
+                    document.getElementById('statTotalSupplier').textContent = formatNumber(stats.total_supplier || 0);
+                }
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+        
+        async function loadAdditionalStats() {
+            try {
+                // Ambil laporan 30 hari terakhir
+                const endDate = getTodayDate();
+                const startDate = new Date();
+                startDate.setDate(startDate.getDate() - 30);
+                const startDateStr = startDate.toISOString().slice(0, 10);
+                
+                const laporan = await getLaporanPenjualan(startDateStr, endDate);
+                
+                // Hitung penjualan bulan ini
+                const now = new Date();
+                const bulanIni = now.getMonth();
+                const tahunIni = now.getFullYear();
+                
+                let totalBulanIni = 0;
+                let jumlahTransaksiHariIni = 0;
+                const todayStr = getTodayDate();
+                
+                laporan.forEach(item => {
+                    const tgl = item.tgl?.slice(0, 10);
+                    if (tgl === todayStr) jumlahTransaksiHariIni++;
+                    
+                    const itemDate = new Date(item.tgl);
+                    if (itemDate.getMonth() === bulanIni && itemDate.getFullYear() === tahunIni) {
+                        totalBulanIni += item.grand_total || 0;
+                    }
+                });
+                
+                document.getElementById('statPenjualanBulanIni').textContent = formatRupiah(totalBulanIni);
+                document.getElementById('statJumlahTransaksi').textContent = jumlahTransaksiHariIni;
+                
+                // Ambil top konsumen
+                const konsumen = await getAllMaster('konsumen');
+                if (konsumen.length > 0) {
+                    const topKonsumen = konsumen.sort((a, b) => (b.poin || 0) - (a.poin || 0))[0];
+                    document.getElementById('statTopKonsumen').textContent = `${topKonsumen.nama} (${topKonsumen.poin || 0} poin)`;
+                }
+            } catch (error) {
+                console.error('Error loading additional stats:', error);
+            }
+        }
+    </script>
+</body>
+</html>

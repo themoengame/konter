@@ -10,7 +10,37 @@ const APP_CONFIG = {
     version: '1.0.0'
 };
 
+// Role-based menu access
+const ROLE_MENU = {
+    admin: ['penjualan', 'pembelian', 'barang', 'supplier', 'konsumen', 'laporan', 'profil'],
+    kasir: ['penjualan', 'konsumen'],
+    gudang: ['pembelian', 'barang', 'supplier'],
+    owner: ['penjualan', 'pembelian', 'barang', 'supplier', 'konsumen', 'laporan', 'profil']
+};
+
+// Menu display names
+const MENU_NAMES = {
+    penjualan: { icon: '💰', name: 'Penjualan' },
+    pembelian: { icon: '📦', name: 'Pembelian' },
+    barang: { icon: '📱', name: 'Barang' },
+    supplier: { icon: '🏭', name: 'Supplier' },
+    konsumen: { icon: '👥', name: 'Konsumen' },
+    laporan: { icon: '📄', name: 'Laporan' },
+    profil: { icon: '🏪', name: 'Profil Toko' }
+};
+
+// Page titles
+const PAGE_TITLES = {
+    penjualan: '💰 Transaksi Penjualan',
+    pembelian: '📦 Transaksi Pembelian',
+    barang: '📱 Master Barang',
+    supplier: '🏭 Master Supplier',
+    konsumen: '👥 Master Konsumen',
+    laporan: '📄 Laporan',
+    profil: '🏪 Profil Toko'
+};
+
 // Export untuk penggunaan
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { BASE_URL, APP_CONFIG };
+    module.exports = { BASE_URL, APP_CONFIG, ROLE_MENU, MENU_NAMES, PAGE_TITLES };
 }
